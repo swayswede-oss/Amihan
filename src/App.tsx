@@ -80,7 +80,7 @@ export default function App() {
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
         {currentView === 'map' && (
-          <div style={{ height: 'calc(100vh - 64px - 1in)' }} className="overflow-hidden">
+          <div style={{ height: 'calc(100vh - 64px - 104px)' }} className="overflow-hidden">
             <MapView vehicles={mockVehicles} onSelectVehicle={setSelectedVehicle} />
           </div>
         )}
