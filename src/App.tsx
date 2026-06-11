@@ -8,7 +8,9 @@ import { Analytics } from './components/Analytics';
 import { Alerts } from './components/Alerts';
 import { SignUp } from './components/SignUp';
 import { Login } from './components/Login';
+import { MapView } from './components/MapView';
 import { api } from './services/api';
+import { mockVehicles } from './data/mockData';
 
 export type Vehicle = {
   id: string;
@@ -76,22 +78,24 @@ export default function App() {
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
-        
-        <main className="flex-1 overflow-y-auto">
-          {currentView === 'map' && (
-            <div className="p-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-6">Live Vehicle Map</h1>
-            </div>
-          )}
-          {currentView === 'dashboard' && (
-            <Dashboard onSelectVehicle={setSelectedVehicle} />
-          )}
-          {currentView === 'vehicles' && (
-            <VehicleList onSelectVehicle={setSelectedVehicle} />
-          )}
-          {currentView === 'analytics' && <Analytics />}
-          {currentView === 'alerts' && <Alerts />}
-        </main>
+
+        {currentView === 'map' && (
+          <div style={{ height: 'calc(100vh - 64px - 1in)' }} className="overflow-hidden">
+            <MapView vehicles={mockVehicles} onSelectVehicle={setSelectedVehicle} />
+          </div>
+        )}
+        {currentView !== 'map' && (
+          <main className="flex-1 overflow-y-auto">
+            {currentView === 'dashboard' && (
+              <Dashboard onSelectVehicle={setSelectedVehicle} />
+            )}
+            {currentView === 'vehicles' && (
+              <VehicleList onSelectVehicle={setSelectedVehicle} />
+            )}
+            {currentView === 'analytics' && <Analytics />}
+            {currentView === 'alerts' && <Alerts />}
+          </main>
+        )}
       </div>
 
       {selectedVehicle && (
