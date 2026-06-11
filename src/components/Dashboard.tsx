@@ -16,14 +16,12 @@ export function Dashboard({ onSelectVehicle }: DashboardProps) {
         <p className="text-sm lg:text-base text-gray-600">Overview of your fleet operations</p>
       </div>
 
-      <StatsCards vehicles={mockVehicles} />
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        <div className="lg:col-span-2">
-          <MapView vehicles={mockVehicles} onSelectVehicle={onSelectVehicle} />
-        </div>
         <div>
           <RecentActivity />
+        </div>
+        <div className="lg:col-span-2 flex flex-col space-y-3 lg:space-y-6">
+          <StatsCards vehicles={mockVehicles} />
         </div>
       </div>
     </div>
