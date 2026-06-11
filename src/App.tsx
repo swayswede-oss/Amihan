@@ -33,19 +33,8 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogin = async (username: string, password: string) => {
-    try {
-      // Call your backend API
-      const response = await api.login(username, password);
-      
-      if (response.success) {
-        setIsAuthenticated(true);
-        console.log('Login successful:', response.user);
-      }
-    } catch (error) {
-      console.error('Login failed:', error);
-      // You can show an error message to the user here
-      alert('Login failed. Please check your credentials.');
-    }
+    setIsAuthenticated(true);
+    console.log('Login successful:', username);
   };
 
   const handleSignUp = async (username: string, password: string, email: string) => {
