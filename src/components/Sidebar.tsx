@@ -1,15 +1,16 @@
-import { LayoutDashboard, Truck, BarChart3, Bell, X } from 'lucide-react';
+import { LayoutDashboard, Truck, BarChart3, Bell, X, Map } from 'lucide-react';
 import logo from 'figma:asset/d766fe78c0990450ebe81dfc9bafb7412cf8f61d.png';
 
 type SidebarProps = {
-  currentView: 'dashboard' | 'vehicles' | 'analytics' | 'alerts';
-  onViewChange: (view: 'dashboard' | 'vehicles' | 'analytics' | 'alerts') => void;
+  currentView: 'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts';
+  onViewChange: (view: 'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts') => void;
   isOpen: boolean;
   onClose: () => void;
 };
 
 export function Sidebar({ currentView, onViewChange, isOpen, onClose }: SidebarProps) {
   const menuItems = [
+    { id: 'map' as const, label: 'Live Vehicle Map', icon: Map },
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'vehicles' as const, label: 'Vehicles', icon: Truck },
     { id: 'analytics' as const, label: 'Analytics', icon: BarChart3 },

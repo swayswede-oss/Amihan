@@ -28,7 +28,7 @@ export type Vehicle = {
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
-  const [currentView, setCurrentView] = useState<'dashboard' | 'vehicles' | 'analytics' | 'alerts'>('dashboard');
+  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts'>('dashboard');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -78,6 +78,11 @@ export default function App() {
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
         
         <main className="flex-1 overflow-y-auto">
+          {currentView === 'map' && (
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-6">Live Vehicle Map</h1>
+            </div>
+          )}
           {currentView === 'dashboard' && (
             <Dashboard onSelectVehicle={setSelectedVehicle} />
           )}
