@@ -30,7 +30,7 @@ export type Vehicle = {
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
-  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts'>('dashboard');
+  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts' | 'notifications' | 'settings'>('dashboard');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -94,6 +94,18 @@ export default function App() {
             )}
             {currentView === 'analytics' && <Analytics />}
             {currentView === 'alerts' && <Alerts />}
+            {currentView === 'notifications' && (
+              <div className="p-4 lg:p-6">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Notifications</h1>
+                <p className="text-gray-600">Your notifications will appear here</p>
+              </div>
+            )}
+            {currentView === 'settings' && (
+              <div className="p-4 lg:p-6">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Settings</h1>
+                <p className="text-gray-600">Application settings and preferences</p>
+              </div>
+            )}
           </main>
         )}
       </div>

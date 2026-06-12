@@ -1,9 +1,9 @@
-import { LayoutDashboard, Truck, BarChart3, Bell, X, Map } from 'lucide-react';
+import { LayoutDashboard, Truck, BarChart3, Bell, X, Map, Settings } from 'lucide-react';
 import logo from 'figma:asset/d766fe78c0990450ebe81dfc9bafb7412cf8f61d.png';
 
 type SidebarProps = {
-  currentView: 'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts';
-  onViewChange: (view: 'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts') => void;
+  currentView: 'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts' | 'notifications' | 'settings';
+  onViewChange: (view: 'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts' | 'notifications' | 'settings') => void;
   isOpen: boolean;
   onClose: () => void;
 };
@@ -15,6 +15,11 @@ export function Sidebar({ currentView, onViewChange, isOpen, onClose }: SidebarP
     { id: 'vehicles' as const, label: 'Vehicles', icon: Truck },
     { id: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
     { id: 'alerts' as const, label: 'Alerts', icon: Bell },
+  ];
+
+  const settingsItems = [
+    { id: 'notifications' as const, label: 'Notifications', icon: Bell },
+    { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -59,7 +64,32 @@ export function Sidebar({ currentView, onViewChange, isOpen, onClose }: SidebarP
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
-              
+
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => onViewChange(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <nav className="px-4 pb-4">
+          <ul className="space-y-2">
+            {settingsItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentView === item.id;
+
               return (
                 <li key={item.id}>
                   <button
