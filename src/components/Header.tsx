@@ -6,8 +6,8 @@ type HeaderProps = {
 
 export function Header({ onMenuClick }: HeaderProps) {
   return (
-    <header className="px-4 lg:px-6 py-3 lg:py-4" style={{ backgroundColor: '#4a5568' }}>
-      <div className="flex items-center justify-between gap-4">
+    <header style={{ backgroundColor: '#4a5568' }}>
+      <div className="flex items-center justify-between gap-4 px-4 lg:px-6 py-3 lg:py-4">
         {/* Mobile menu button */}
         <button
           onClick={onMenuClick}
