@@ -40,7 +40,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div className="rounded-2xl shadow-xl w-full max-w-md overflow-hidden" style={{ backgroundColor: '#e8eef5' }}>
         {/* Header */}
         <div 
           className="text-white p-6 lg:p-8 bg-cover bg-center bg-no-repeat"

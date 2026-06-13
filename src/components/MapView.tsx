@@ -15,13 +15,13 @@ export function MapView({ vehicles, onSelectVehicle }: MapViewProps) {
   };
   // below line 19, figure leaflet library
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="text-gray-900">Live Vehicle Map</h3>
+    <div className="relative bg-gray-100 w-full h-full overflow-hidden">
+      <div className="absolute top-4 left-4 z-10">
+        <h3 className="text-gray-900 text-xl font-semibold">Live Vehicle Map</h3>
         <p className="text-xs lg:text-sm text-gray-600">Real-time tracking of all vehicles</p>
       </div>
-      
-      <div className="relative bg-gray-100 h-[300px] lg:h-[500px]">
+
+      <div className="relative bg-gray-100 w-full h-full">
         {/* Map background with grid */}
         <div className="absolute inset-0 opacity-10">
           <div className="grid grid-cols-8 grid-rows-8 h-full">
