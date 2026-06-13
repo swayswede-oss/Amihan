@@ -180,6 +180,14 @@
   }
 }
 
+.login-background {
+  min-height: 100vh !important;
+  background-image: url('../assets/circle-room.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
 html {
   font-size: var(--font-size);
 }
