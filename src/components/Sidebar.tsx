@@ -1,9 +1,9 @@
-import { LayoutDashboard, Truck, BarChart3, Bell, X, Map, Settings } from 'lucide-react';
+import { LayoutDashboard, Truck, BarChart3, Bell, X, Map, Settings, Clock } from 'lucide-react';
 import logo from 'figma:asset/d766fe78c0990450ebe81dfc9bafb7412cf8f61d.png';
 
 type SidebarProps = {
-  currentView: 'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts' | 'notifications' | 'settings';
-  onViewChange: (view: 'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts' | 'notifications' | 'settings') => void;
+  currentView: 'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'notifications' | 'settings';
+  onViewChange: (view: 'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'notifications' | 'settings') => void;
   isOpen: boolean;
   onClose: () => void;
 };
@@ -13,6 +13,7 @@ export function Sidebar({ currentView, onViewChange, isOpen, onClose }: SidebarP
     { id: 'map' as const, label: 'Live Vehicle Map', icon: Map },
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'vehicles' as const, label: 'Vehicles', icon: Truck },
+    { id: 'vehicle-history' as const, label: 'Vehicle History', icon: Clock },
     { id: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
     { id: 'alerts' as const, label: 'Alerts', icon: Bell },
   ];

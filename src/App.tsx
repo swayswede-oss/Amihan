@@ -30,7 +30,7 @@ export type Vehicle = {
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
-  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'analytics' | 'alerts' | 'notifications' | 'settings'>('dashboard');
+  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'notifications' | 'settings'>('dashboard');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -91,6 +91,12 @@ export default function App() {
             )}
             {currentView === 'vehicles' && (
               <VehicleList onSelectVehicle={setSelectedVehicle} />
+            )}
+            {currentView === 'vehicle-history' && (
+              <div className="p-4 lg:p-6">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Vehicle History</h1>
+                <p className="text-gray-600">View historical data and past activity for all vehicles</p>
+              </div>
             )}
             {currentView === 'analytics' && <Analytics />}
             {currentView === 'alerts' && <Alerts />}
