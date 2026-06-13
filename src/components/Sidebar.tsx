@@ -123,7 +123,8 @@ export function Sidebar({ currentView, onViewChange, isOpen, onClose, onLogout }
             </div>
             <button
               onClick={onLogout}
-              className="flex-shrink-0 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-300 rounded-lg transition-colors"
+              className="flex-shrink-0 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+              style={{ backgroundColor: 'transparent' }}
             >
               <LogOut className="w-5 h-5" />
             </button>
