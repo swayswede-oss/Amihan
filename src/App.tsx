@@ -39,6 +39,12 @@ export default function App() {
     console.log('Login successful:', username);
   };
 
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setAuthView('login');
+    setCurrentView('dashboard');
+  };
+
   const handleSignUp = async (username: string, password: string, email: string) => {
     try {
       // Call your backend API
@@ -66,14 +72,15 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <Sidebar 
-        currentView={currentView} 
+      <Sidebar
+        currentView={currentView}
         onViewChange={(view) => {
           setCurrentView(view);
           setIsSidebarOpen(false);
-        }} 
+        }}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        onLogout={handleLogout}
       />
       
       <div className="flex-1 flex flex-col overflow-hidden">
