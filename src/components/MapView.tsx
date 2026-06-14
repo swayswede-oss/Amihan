@@ -1,12 +1,38 @@
+import { useEffect, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import { Vehicle } from '../App';
 
 type MapViewProps = {
   vehicles: Vehicle[];
   onSelectVehicle: (vehicle: Vehicle) => void;
+  focusedVehicleId?: string | null;
 };
 
-export function MapView({ vehicles, onSelectVehicle }: MapViewProps) {
+const ZOOM_SCALE = 2.5;
+
+export function getVehicleMarkerPosition(index: number) {
+  return {
+    left: 15 + (index % 4) * 20,
+    top: 20 + Math.floor(index / 4) * 25,
+  };
+}
+
+export function MapView({ vehicles, onSelectVehicle, focusedVehicleId }: MapViewProps) {
+  const [zoomTransform, setZoomTransform] = useState({ scale: 1, originX: 50, originY: 50 });
+
+  useEffect(() => {
+    if (!focusedVehicleId) {
+      setZoomTransform({ scale: 1, originX: 50, originY: 50 });
+      return;
+    }
+
+    const index = vehicles.findIndex((vehicle) => vehicle.id === focusedVehicleId);
+    if (index === -1) return;
+
+    const { left, top } = getVehicleMarkerPosition(index);
+    setZoomTransform({ scale: ZOOM_SCALE, originX: left, originY: top });
+  }, [focusedVehicleId, vehicles]);
+
   const statusColors = {
     active: 'bg-green-500',
     idle: 'bg-yellow-500',
@@ -21,7 +47,13 @@ export function MapView({ vehicles, onSelectVehicle }: MapViewProps) {
         <p className="text-xs lg:text-sm text-gray-600">Real-time tracking of all vehicles</p>
       </div>
 
-      <div className="relative bg-gray-100 w-full h-full">
+      <div
+        className="relative bg-gray-100 w-full h-full transition-transform duration-500 ease-out"
+        style={{
+          transform: `scale(${zoomTransform.scale})`,
+          transformOrigin: `${zoomTransform.originX}% ${zoomTransform.originY}%`,
+        }}
+      >
         {/* Map background with grid */}
         <div className="absolute inset-0 opacity-10">
           <div className="grid grid-cols-8 grid-rows-8 h-full">
@@ -32,18 +64,22 @@ export function MapView({ vehicles, onSelectVehicle }: MapViewProps) {
         </div>
 
         {/* Vehicle markers */}
-        {vehicles.map((vehicle, index) => (
+        {vehicles.map((vehicle, index) => {
+          const { left, top } = getVehicleMarkerPosition(index);
+          const isFocused = vehicle.id === focusedVehicleId;
+
+          return (
           <button
             key={vehicle.id}
             onClick={() => onSelectVehicle(vehicle)}
             className="absolute group"
             style={{
-              left: `${15 + (index % 4) * 20}%`,
-              top: `${20 + Math.floor(index / 4) * 25}%`,
+              left: `${left}%`,
+              top: `${top}%`,
             }}
           >
             <div className="relative">
-              <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full ${statusColors[vehicle.status]} flex items-center justify-center shadow-lg border-2 border-white transition-transform group-hover:scale-110`}>
+              <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full ${statusColors[vehicle.status]} flex items-center justify-center shadow-lg border-2 border-white transition-transform group-hover:scale-110 ${isFocused ? 'ring-4 ring-blue-500 scale-125' : ''}`}>
                 <MapPin className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
               </div>
               
@@ -58,7 +94,8 @@ export function MapView({ vehicles, onSelectVehicle }: MapViewProps) {
               </div>
             </div>
           </button>
-        ))}
+          );
+        })}
 
         {/* Legend */}
         <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-2 lg:p-3 space-y-1 lg:space-y-2">

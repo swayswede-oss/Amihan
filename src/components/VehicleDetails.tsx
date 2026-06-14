@@ -4,9 +4,10 @@ import { Vehicle } from '../App';
 type VehicleDetailsProps = {
   vehicle: Vehicle;
   onClose: () => void;
+  onZoomIn: (vehicle: Vehicle) => void;
 };
 
-export function VehicleDetails({ vehicle, onClose }: VehicleDetailsProps) {
+export function VehicleDetails({ vehicle, onClose, onZoomIn }: VehicleDetailsProps) {
   const statusColors = {
     active: 'bg-green-100 text-green-700',
     idle: 'bg-yellow-100 text-yellow-700',
@@ -122,8 +123,11 @@ export function VehicleDetails({ vehicle, onClose }: VehicleDetailsProps) {
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <button className="flex-1 px-4 py-2 lg:py-3 text-sm lg:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Track Vehicle
+            <button
+              onClick={() => onZoomIn(vehicle)}
+              className="flex-1 px-4 py-2 lg:py-3 text-sm lg:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Zoom In
             </button>
             <button className="flex-1 px-4 py-2 lg:py-3 text-sm lg:text-base border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
               View History

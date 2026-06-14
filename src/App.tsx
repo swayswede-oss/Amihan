@@ -27,14 +27,37 @@ export type Vehicle = {
   lastUpdate: string;
 };
 
+export type UserProfile = {
+  name: string;
+  position: string;
+  email: string;
+  phone: string;
+  createdAt: string;
+};
+
+const defaultUser: UserProfile = {
+  name: 'John Doe',
+  position: 'Fleet Manager',
+  email: 'john.doe@amihan.com',
+  phone: '+1 (555) 123-4567',
+  createdAt: '2024-03-15T00:00:00.000Z',
+};
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
-  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'notifications' | 'settings'>('dashboard');
+  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'settings'>('dashboard');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [focusedVehicleId, setFocusedVehicleId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [user, setUser] = useState<UserProfile>(defaultUser);
 
   const handleLogin = async (username: string, password: string) => {
+    setUser((prev) => ({
+      ...prev,
+      name: username,
+      email: `${username}@amihan.com`,
+    }));
     setIsAuthenticated(true);
     console.log('Login successful:', username);
   };
@@ -43,6 +66,14 @@ export default function App() {
     setIsAuthenticated(false);
     setAuthView('login');
     setCurrentView('dashboard');
+    setFocusedVehicleId(null);
+  };
+
+  const handleZoomIn = (vehicle: Vehicle) => {
+    setFocusedVehicleId(vehicle.id);
+    setCurrentView('map');
+    setSelectedVehicle(null);
+    setIsSidebarOpen(false);
   };
 
   const handleSignUp = async (username: string, password: string, email: string) => {
@@ -51,6 +82,12 @@ export default function App() {
       const response = await api.signUp(username, password, email);
       
       if (response.success) {
+        setUser((prev) => ({
+          ...prev,
+          name: username,
+          email,
+          createdAt: new Date().toISOString(),
+        }));
         setIsAuthenticated(true);
         console.log('Sign up successful:', response.user);
       }
@@ -76,11 +113,15 @@ export default function App() {
         currentView={currentView}
         onViewChange={(view) => {
           setCurrentView(view);
+          if (view !== 'map') {
+            setFocusedVehicleId(null);
+          }
           setIsSidebarOpen(false);
         }}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onLogout={handleLogout}
+        user={user}
       />
       
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -88,7 +129,11 @@ export default function App() {
 
         {currentView === 'map' && (
           <div style={{ height: 'calc(100vh - 64px - 104px)' }} className="overflow-hidden">
-            <MapView vehicles={mockVehicles} onSelectVehicle={setSelectedVehicle} />
+            <MapView
+              vehicles={mockVehicles}
+              onSelectVehicle={setSelectedVehicle}
+              focusedVehicleId={focusedVehicleId}
+            />
           </div>
         )}
         {currentView !== 'map' && (
@@ -107,12 +152,6 @@ export default function App() {
             )}
             {currentView === 'analytics' && <Analytics />}
             {currentView === 'alerts' && <Alerts />}
-            {currentView === 'notifications' && (
-              <div className="p-4 lg:p-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Notifications</h1>
-                <p className="text-gray-600">Your notifications will appear here</p>
-              </div>
-            )}
             {currentView === 'settings' && (
               <div className="p-4 lg:p-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Settings</h1>
@@ -124,9 +163,10 @@ export default function App() {
       </div>
 
       {selectedVehicle && (
-        <VehicleDetails 
-          vehicle={selectedVehicle} 
-          onClose={() => setSelectedVehicle(null)} 
+        <VehicleDetails
+          vehicle={selectedVehicle}
+          onClose={() => setSelectedVehicle(null)}
+          onZoomIn={handleZoomIn}
         />
       )}
     </div>
