@@ -8,6 +8,7 @@ import { mockVehicles } from '../data/mockData';
 
 type DashboardProps = {
   onSelectVehicle: (vehicle: Vehicle) => void;
+  onViewAllActivity?: () => void;
 };
 
 type DashboardItem = {
@@ -15,7 +16,7 @@ type DashboardItem = {
   type: 'stats' | 'activity';
 };
 
-export function Dashboard({ onSelectVehicle }: DashboardProps) {
+export function Dashboard({ onSelectVehicle, onViewAllActivity }: DashboardProps) {
   const [items, setItems] = useState<DashboardItem[]>([
     { id: 'activity', type: 'activity' },
     { id: 'stats', type: 'stats' },
@@ -61,7 +62,9 @@ export function Dashboard({ onSelectVehicle }: DashboardProps) {
                         item.type === 'stats' ? 'lg:col-span-2' : ''
                       } ${snapshot.isDragging ? 'opacity-50' : ''}`}
                     >
-                      {item.type === 'activity' && <RecentActivity />}
+                      {item.type === 'activity' && (
+                        <RecentActivity onViewAllActivity={onViewAllActivity} />
+                      )}
                       {item.type === 'stats' && (
                         <div className="flex flex-col space-y-3 lg:space-y-6">
                           <StatsCards vehicles={mockVehicles} />

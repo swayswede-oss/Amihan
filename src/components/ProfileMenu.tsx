@@ -44,7 +44,7 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: Pro
             <p className={`text-sm truncate ${open ? 'text-blue-600' : 'text-gray-900'}`}>
               {user.name}
             </p>
-            <p className={`text-xs truncate ${open ? 'text-blue-500' : 'text-gray-500'}`}>
+            <p className={`text-xs truncate ${open ? 'text-blue-500' : 'text-gray-600'}`}>
               {user.position}
             </p>
           </div>

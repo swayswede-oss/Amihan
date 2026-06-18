@@ -112,7 +112,7 @@ export function Sidebar({ currentView, onViewChange, isOpen, onClose, onLogout, 
             </div>
             <div>
               <h1 className="text-gray-900">Amihan</h1>
-              <p className="text-xs text-gray-500">Fleet Management</p>
+              <p className="text-xs text-gray-600">Fleet Management</p>
             </div>
           </div>
         </div>

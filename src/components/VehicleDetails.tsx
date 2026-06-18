@@ -5,9 +5,10 @@ type VehicleDetailsProps = {
   vehicle: Vehicle;
   onClose: () => void;
   onZoomIn: (vehicle: Vehicle) => void;
+  onViewHistory: (vehicle: Vehicle) => void;
 };
 
-export function VehicleDetails({ vehicle, onClose, onZoomIn }: VehicleDetailsProps) {
+export function VehicleDetails({ vehicle, onClose, onZoomIn, onViewHistory }: VehicleDetailsProps) {
   const statusColors = {
     active: 'bg-green-100 text-green-700',
     idle: 'bg-yellow-100 text-yellow-700',
@@ -129,7 +130,10 @@ export function VehicleDetails({ vehicle, onClose, onZoomIn }: VehicleDetailsPro
             >
               Zoom In
             </button>
-            <button className="flex-1 px-4 py-2 lg:py-3 text-sm lg:text-base border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+            <button
+              onClick={() => onViewHistory(vehicle)}
+              className="flex-1 px-4 py-2 lg:py-3 text-sm lg:text-base border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               View History
             </button>
           </div>

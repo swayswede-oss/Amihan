@@ -9,6 +9,7 @@ import { Alerts } from './components/Alerts';
 import { SignUp } from './components/SignUp';
 import { Login } from './components/Login';
 import { MapView } from './components/MapView';
+import { VehicleHistory } from './components/VehicleHistory';
 import { api } from './services/api';
 import { mockVehicles } from './data/mockData';
 
@@ -49,6 +50,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'settings'>('dashboard');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [focusedVehicleId, setFocusedVehicleId] = useState<string | null>(null);
+  const [historyFocusedVehicleId, setHistoryFocusedVehicleId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState<UserProfile>(defaultUser);
 
@@ -67,12 +69,28 @@ export default function App() {
     setAuthView('login');
     setCurrentView('dashboard');
     setFocusedVehicleId(null);
+    setHistoryFocusedVehicleId(null);
   };
 
   const handleZoomIn = (vehicle: Vehicle) => {
     setFocusedVehicleId(vehicle.id);
     setCurrentView('map');
     setSelectedVehicle(null);
+    setIsSidebarOpen(false);
+  };
+
+  const handleViewHistory = (vehicle: Vehicle) => {
+    window.history.replaceState(null, '', '/vehicle-history');
+    setHistoryFocusedVehicleId(vehicle.id);
+    setCurrentView('vehicle-history');
+    setSelectedVehicle(null);
+    setIsSidebarOpen(false);
+  };
+
+  const handleViewAllActivity = () => {
+    window.history.pushState(null, '', '/vehicle-history?timeRange=24h');
+    setHistoryFocusedVehicleId(null);
+    setCurrentView('vehicle-history');
     setIsSidebarOpen(false);
   };
 
@@ -116,6 +134,12 @@ export default function App() {
           if (view !== 'map') {
             setFocusedVehicleId(null);
           }
+          setHistoryFocusedVehicleId(null);
+          if (view === 'vehicle-history') {
+            window.history.replaceState(null, '', '/vehicle-history');
+          } else {
+            window.history.replaceState(null, '', '/');
+          }
           setIsSidebarOpen(false);
         }}
         isOpen={isSidebarOpen}
@@ -139,16 +163,19 @@ export default function App() {
         {currentView !== 'map' && (
           <main className="flex-1 overflow-y-auto">
             {currentView === 'dashboard' && (
-              <Dashboard onSelectVehicle={setSelectedVehicle} />
+              <Dashboard
+                onSelectVehicle={setSelectedVehicle}
+                onViewAllActivity={handleViewAllActivity}
+              />
             )}
             {currentView === 'vehicles' && (
               <VehicleList onSelectVehicle={setSelectedVehicle} />
             )}
             {currentView === 'vehicle-history' && (
-              <div className="p-4 lg:p-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Vehicle History</h1>
-                <p className="text-gray-600">View historical data and past activity for all vehicles</p>
-              </div>
+              <VehicleHistory
+                focusedVehicleId={historyFocusedVehicleId}
+                onFocusHandled={() => setHistoryFocusedVehicleId(null)}
+              />
             )}
             {currentView === 'analytics' && <Analytics />}
             {currentView === 'alerts' && <Alerts />}
@@ -167,6 +194,7 @@ export default function App() {
           vehicle={selectedVehicle}
           onClose={() => setSelectedVehicle(null)}
           onZoomIn={handleZoomIn}
+          onViewHistory={handleViewHistory}
         />
       )}
     </div>

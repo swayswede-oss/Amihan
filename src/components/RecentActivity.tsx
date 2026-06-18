@@ -1,6 +1,10 @@
 import { Clock, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 
-export function RecentActivity() {
+type RecentActivityProps = {
+  onViewAllActivity?: () => void;
+};
+
+export function RecentActivity({ onViewAllActivity }: RecentActivityProps) {
   const activities = [
     {
       id: 1,
@@ -74,7 +78,11 @@ export function RecentActivity() {
       </div>
 
       <div className="p-3 lg:p-4 border-t border-gray-200">
-        <button className="w-full text-center text-xs lg:text-sm text-blue-600 hover:text-blue-700">
+        <button
+          type="button"
+          onClick={onViewAllActivity}
+          className="w-full text-center text-xs lg:text-sm text-blue-600 hover:text-blue-700"
+        >
           View all activity
         </button>
       </div>
