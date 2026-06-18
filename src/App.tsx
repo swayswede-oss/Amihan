@@ -8,6 +8,7 @@ import { Analytics } from './components/Analytics';
 import { Alerts } from './components/Alerts';
 import { SignUp } from './components/SignUp';
 import { Login } from './components/Login';
+import { ForgotPassword } from './components/ForgotPassword';
 import { MapView } from './components/MapView';
 import { VehicleHistory } from './components/VehicleHistory';
 import { api } from './services/api';
@@ -46,7 +47,7 @@ const defaultUser: UserProfile = {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+  const [authView, setAuthView] = useState<'login' | 'signup' | 'forgot-password'>('login');
   const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'settings'>('dashboard');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [focusedVehicleId, setFocusedVehicleId] = useState<string | null>(null);
@@ -119,10 +120,18 @@ export default function App() {
   // Show authentication screens if not logged in
   if (!isAuthenticated) {
     if (authView === 'login') {
-      return <Login onLogin={handleLogin} onSwitchToSignUp={() => setAuthView('signup')} />;
-    } else {
-      return <SignUp onSignUp={handleSignUp} onSwitchToLogin={() => setAuthView('login')} />;
+      return (
+        <Login
+          onLogin={handleLogin}
+          onSwitchToSignUp={() => setAuthView('signup')}
+          onForgotPassword={() => setAuthView('forgot-password')}
+        />
+      );
     }
+    if (authView === 'forgot-password') {
+      return <ForgotPassword onSwitchToLogin={() => setAuthView('login')} />;
+    }
+    return <SignUp onSignUp={handleSignUp} onSwitchToLogin={() => setAuthView('login')} />;
   }
 
   return (

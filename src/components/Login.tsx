@@ -5,9 +5,10 @@ import logo from 'figma:asset/d766fe78c0990450ebe81dfc9bafb7412cf8f61d.png';
 type LoginProps = {
   onLogin: (username: string, password: string) => void;
   onSwitchToSignUp: () => void;
+  onForgotPassword: () => void;
 };
 
-export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
+export function Login({ onLogin, onSwitchToSignUp, onForgotPassword }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,15 +43,12 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
     <div className="login-background min-h-screen flex items-center justify-center p-4">
       <div className="rounded-2xl shadow-xl w-full max-w-md overflow-hidden" style={{ backgroundColor: '#e8eef5' }}>
         {/* Header */}
-        <div 
-          className="text-white p-6 lg:p-8 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${logo})` }}
-        >
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <h1 className="text-2xl lg:text-3xl">Amihan</h1>
-          </div>
-          {/*Dev header name */}
-          <p className="text-center text-blue-100 text-sm lg:text-base"></p>
+        <div className="bg-black px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-center">
+          <img
+            src={logo}
+            alt="Amihan"
+            className="login-logo-image"
+          />
         </div>
 
         {/* Form */}
@@ -124,6 +122,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
             <div className="flex items-center justify-end">
               <button
                 type="button"
+                onClick={onForgotPassword}
                 className="text-sm text-blue-600 hover:text-blue-700"
               >
                 Forgot password?

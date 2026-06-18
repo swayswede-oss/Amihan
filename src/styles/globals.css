@@ -188,6 +188,13 @@
   background-repeat: no-repeat !important;
 }
 
+.login-logo-image {
+  display: block;
+  width: min(240px, 78%);
+  height: auto;
+  object-fit: contain;
+}
+
 html {
   font-size: var(--font-size);
 }
