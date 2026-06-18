@@ -63,7 +63,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
     <div className="login-background min-h-screen flex items-center justify-center p-4">
       <div className="rounded-2xl shadow-xl w-full max-w-md overflow-hidden" style={{ backgroundColor: '#e8eef5' }}>
         {/* Header */}
-        <div className="bg-black px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-center">
+        <div className="login-logo-header bg-black flex items-center justify-center">
           <img
             src={logo}
             alt="Amihan"
