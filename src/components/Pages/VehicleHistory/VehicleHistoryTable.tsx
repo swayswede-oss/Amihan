@@ -11,7 +11,7 @@ import {
   VehicleHistoryRecord,
   VehicleHistoryEventType,
   formatHistoryTimestamp,
-} from '../data/vehicleHistoryData';
+} from '../../../data/vehicleHistoryData';
 
 type VehicleHistoryTableProps = {
   records: VehicleHistoryRecord[];

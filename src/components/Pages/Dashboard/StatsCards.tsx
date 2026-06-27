@@ -1,5 +1,5 @@
 import { Truck, TrendingUp, AlertTriangle, Activity } from 'lucide-react';
-import { Vehicle } from '../App';
+import { Vehicle } from '../../../App';
 
 type StatsCardsProps = {
   vehicles: Vehicle[];

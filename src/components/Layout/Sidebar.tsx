@@ -13,7 +13,7 @@ import {
   GripVertical,
   type LucideIcon,
 } from 'lucide-react';
-import { UserProfile } from '../App';
+import { UserProfile } from '../../App';
 import { ProfileMenu } from './ProfileMenu';
 
 type MenuItemId = 'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'settings';

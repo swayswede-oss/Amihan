@@ -9,7 +9,7 @@ import {
   getInitialDateRangeFromQuery,
   isWithinDateRange,
   vehicleHistoryRecords,
-} from '../data/vehicleHistoryData';
+} from '../../../data/vehicleHistoryData';
 
 const DEFAULT_DATE_RANGE: DateRangeFilter = 'all';
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, Filter, MapPin, Fuel, Gauge } from 'lucide-react';
-import { Vehicle } from '../App';
-import { mockVehicles } from '../data/mockData';
+import { Vehicle } from '../../../App';
+import { mockVehicles } from '../../../data/mockData';
 
 type VehicleListProps = {
   onSelectVehicle: (vehicle: Vehicle) => void;

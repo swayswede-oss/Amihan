@@ -3,7 +3,7 @@ import {
   DATE_RANGE_OPTIONS,
   EVENT_TYPE_OPTIONS,
   DateRangeFilter,
-} from '../data/vehicleHistoryData';
+} from '../../../data/vehicleHistoryData';
 
 type VehicleHistoryFiltersProps = {
   searchQuery: string;

@@ -1,5 +1,5 @@
 import { X, MapPin, User, Clock, Fuel, Gauge, Calendar } from 'lucide-react';
-import { Vehicle } from '../App';
+import { Vehicle } from '../../../App';
 
 type VehicleDetailsProps = {
   vehicle: Vehicle;

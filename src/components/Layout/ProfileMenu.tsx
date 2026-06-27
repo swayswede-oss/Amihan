@@ -1,6 +1,6 @@
 import { Mail, Phone, Calendar, Settings } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { UserProfile } from '../App';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { UserProfile } from '../../App';
 
 type ProfileMenuProps = {
   open: boolean;

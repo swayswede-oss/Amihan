@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { Vehicle } from '../App';
-import { MapView } from './MapView';
+import { Vehicle } from '../../../App';
+import { MapView } from '../../Map/MapView';
 import { StatsCards } from './StatsCards';
 import { RecentActivity } from './RecentActivity';
-import { mockVehicles } from '../data/mockData';
+import { mockVehicles } from '../../../data/mockData';
 
 type DashboardProps = {
   onSelectVehicle: (vehicle: Vehicle) => void;

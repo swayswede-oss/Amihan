@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MapPin } from 'lucide-react';
-import { Vehicle } from '../App';
+import { Vehicle } from '../../App';
 
 type MapViewProps = {
   vehicles: Vehicle[];
