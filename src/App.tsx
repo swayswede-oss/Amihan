@@ -3,7 +3,7 @@ import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
 import { Dashboard } from './components/Pages/Dashboard/Dashboard';
 import { VehicleList } from './components/Pages/Vehicles/VehicleList';
-import { VehicleDetails } from './components/Pages/Vehicles/VehicleDetails'
+import { VehicleDetails } from './components/Pages/Vehicles/VehicleDetails';
 import { Analytics } from './components/Pages/Analytics/Analytics';
 import { Alerts } from './components/Pages/Alerts/Alerts';
 import { SignUp } from './components/Authentication/SignUp';
@@ -56,6 +56,8 @@ export default function App() {
   const [user, setUser] = useState<UserProfile>(defaultUser);
 
   const handleLogin = async (username: string, password: string) => {
+    /* -- UNCOMMENT THIS SECTION TO USE TEST USER -- */
+    /*    
     setUser((prev) => ({
       ...prev,
       name: username,
@@ -63,6 +65,20 @@ export default function App() {
     }));
     setIsAuthenticated(true);
     console.log('Login successful:', username);
+    */
+    try {
+      const response = await api.login(username, password);
+      setUser((prev) => ({
+          ...prev,
+          name: response.username
+      }));
+      setIsAuthenticated(true);
+      // test to make sure that the token was cached
+      console.log(localStorage.getItem('authToken'));
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Incorrect Credentials. Please Try Again.")
+    }
   };
 
   const handleLogout = () => {
@@ -108,7 +124,7 @@ export default function App() {
           createdAt: new Date().toISOString(),
         }));
         setIsAuthenticated(true);
-        console.log('Sign up successful:', response.user);
+        console.log('Sign up successful:', response.username);
       }
     } catch (error) {
       console.error('Sign up failed:', error);

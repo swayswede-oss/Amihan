@@ -1,7 +1,7 @@
 import axios from 'axios';
-
+import { jwtDecode } from 'jwt-decode';
 // API Configuration
-const API_BASE_URL = 'http://localhost:8080'; // Change this to your backend URL
+const API_BASE_URL = import.meta.env.VITE_API_URL; // Change this to your backend URL
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
@@ -41,30 +41,41 @@ export type SignUpRequest = {
 export type AuthResponse = {
   success: boolean;
   token?: string;
+  username: string;
+  /* -- TEST FIELDS THAT DON'T MATCH API STRUCTURES -- */ 
+  /*
   user?: {
     id: string;
     username: string;
     email: string;
   };
   message?: string;
+  */
 };
 
 // API Functions
 export const api = {
   // Login function
   login: async (username: string, password: string): Promise<AuthResponse> => {
-    try {
-      const response = await axiosInstance.post<AuthResponse>('/login', {
-        username,
-        password,
-      });
-
-      // Store token in localStorage if provided
-      if (response.data.token) {
-        localStorage.setItem('authToken', response.data.token);
-      }
-
-      return response.data;
+      const payload = {
+        "idx": 0,
+        "username": username,
+        "password_hash": password,
+        "email": ""
+      };
+      try {
+        const response = await axiosInstance.post('/login', payload);
+        // Store token in localStorage if retrieval was successful
+          if (response.status == 200) {
+            localStorage.setItem('authToken', response.data);
+            const claims = jwtDecode(response.data);
+            const loggedIn: AuthResponse =  {
+                success: true,
+                token: response.data,
+                username: claims['username']
+            };
+            return loggedIn;
+        }
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error('Login error:', error.response?.data || error.message);
