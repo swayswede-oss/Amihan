@@ -1,7 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import { Vehicle } from '../../App';
-
+import 'leaflet/dist/leaflet.css';
+import polyline from '@mapbox/polyline';
+import L from 'leaflet';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import '@maplibre/maplibre-gl-leaflet';
+import { api } from '../../services/api';
+/*
 type MapViewProps = {
   vehicles: Vehicle[];
   onSelectVehicle: (vehicle: Vehicle) => void;
@@ -16,7 +22,75 @@ export function getVehicleMarkerPosition(index: number) {
     top: 20 + Math.floor(index / 4) * 25,
   };
 }
+*/
 
+export function MapView() {
+
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+
+  const [polyString, setPolyString] = useState<string>("");
+
+  useEffect(() => {
+      // only init map if the DOM element exists but the map hasn't been built yet
+      if (mapContainerRef.current && !mapInstanceRef.current) {
+        const map = L.map(mapContainerRef.current)
+        mapInstanceRef.current = map;
+      
+        (L as any).maplibreGL({
+          style:'https://tiles.openfreemap.org/styles/positron',
+          attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+      }
+
+      async function loadPolyString() {
+        const data = await api.getTestPolyline();
+        setPolyString(data);
+      }
+      loadPolyString();
+       return () => {
+         if (mapInstanceRef.current) {
+           mapInstanceRef.current.remove();
+           mapInstanceRef.current = null;
+         }
+       };
+      
+  }, []);
+
+  useEffect(() => {
+      const map = mapInstanceRef.current;
+      if (!map || polyString == "") return;
+
+      const coords: Array<[number, number]> = polyline.decode(polyString);
+      const firstPoint = coords[0];
+      map.setView([firstPoint[0], firstPoint[1]], 17);
+      
+      // set parameters for the polyline
+      const fetchedLine = L.polyline(coords, {
+          color: '#FF0000',
+          weight: 5,
+          opacity: 0.75,
+          lineJoin: 'round',
+          lineCap: 'round'
+      }).addTo(map);
+    
+      return () => {
+          map.removeLayer(fetchedLine);
+      
+      };
+  }, [polyString]);
+ 
+ 
+  return (
+    <div style={{ width:'100%', height:'100%' }}>
+      <h1 style={{height: '5%'}}>Map View</h1>
+      <div ref={mapContainerRef} style={{ width: '100%', height: '95%'}} />
+    </div>
+
+  )
+}
+
+/*
 export function MapView({ vehicles, onSelectVehicle, focusedVehicleId }: MapViewProps) {
   const [zoomTransform, setZoomTransform] = useState({ scale: 1, originX: 50, originY: 50 });
 
@@ -54,7 +128,6 @@ export function MapView({ vehicles, onSelectVehicle, focusedVehicleId }: MapView
           transformOrigin: `${zoomTransform.originX}% ${zoomTransform.originY}%`,
         }}
       >
-        {/* Map background with grid */}
         <div className="absolute inset-0 opacity-10">
           <div className="grid grid-cols-8 grid-rows-8 h-full">
             {Array.from({ length: 64 }).map((_, i) => (
@@ -63,7 +136,6 @@ export function MapView({ vehicles, onSelectVehicle, focusedVehicleId }: MapView
           </div>
         </div>
 
-        {/* Vehicle markers */}
         {vehicles.map((vehicle, index) => {
           const { left, top } = getVehicleMarkerPosition(index);
           const isFocused = vehicle.id === focusedVehicleId;
@@ -83,7 +155,6 @@ export function MapView({ vehicles, onSelectVehicle, focusedVehicleId }: MapView
                 <MapPin className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
               </div>
               
-              {/* Tooltip */}
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
                   <div>{vehicle.name}</div>
@@ -97,7 +168,6 @@ export function MapView({ vehicles, onSelectVehicle, focusedVehicleId }: MapView
           );
         })}
 
-        {/* Legend */}
         <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-2 lg:p-3 space-y-1 lg:space-y-2">
           <p className="text-xs text-gray-900">Status</p>
           {Object.entries(statusColors).map(([status, color]) => (
@@ -110,4 +180,6 @@ export function MapView({ vehicles, onSelectVehicle, focusedVehicleId }: MapView
       </div>
     </div>
   );
+
 }
+*/

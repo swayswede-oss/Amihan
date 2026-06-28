@@ -86,6 +86,21 @@ export const api = {
     }
   },
 
+  getTestPolyline: async(): Promise<string> => {
+    try {
+      const path = "/api/getPolyline/43acd555-eb65-4eec-8e30-684547a516ff";
+      const response = await axiosInstance.get(path);
+      if (response.status == 200 ) {
+        return response.data;
+      } else {
+        return "Couldn't get polyline";
+      }
+    } catch (error) {
+      console.error(error);
+      return "Couldn't get polyline";
+    }
+      },
+
   // Sign up function
   signUp: async (username: string, password: string, email: string): Promise<AuthResponse> => {
     try {
