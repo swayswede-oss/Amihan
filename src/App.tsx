@@ -57,7 +57,7 @@ export default function App() {
 
   const handleLogin = async (username: string, password: string) => {
     /* -- UNCOMMENT THIS SECTION TO USE TEST USER -- */
-    /*    
+    /*
     setUser((prev) => ({
       ...prev,
       name: username,
@@ -73,8 +73,6 @@ export default function App() {
           name: response.username
       }));
       setIsAuthenticated(true);
-      // test to make sure that the token was cached
-      console.log(localStorage.getItem('authToken'));
     } catch (error) {
       console.error("Error:", error);
       alert("Incorrect Credentials. Please Try Again.")
@@ -116,16 +114,16 @@ export default function App() {
       // Call your backend API
       const response = await api.signUp(username, password, email);
       
-      if (response.success) {
-        setUser((prev) => ({
-          ...prev,
-          name: username,
+      setUser((prev) => ({
+        ...prev,
+        name: username,
+          /*
           email,
           createdAt: new Date().toISOString(),
+          */
         }));
-        setIsAuthenticated(true);
-        console.log('Sign up successful:', response.username);
-      }
+      setIsAuthenticated(true);
+      console.log('Sign up successful:', response?.username);
     } catch (error) {
       console.error('Sign up failed:', error);
       // You can show an error message to the user here
