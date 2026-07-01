@@ -96,7 +96,7 @@ export const api = {
         return "Couldn't get polyline";
       }
     } catch (error) {
-      console.error(error);
+      console.log(error);
       return "Couldn't get polyline";
     }
       },
@@ -104,18 +104,25 @@ export const api = {
   // Sign up function
   signUp: async (username: string, password: string, email: string): Promise<AuthResponse> => {
     try {
-      const response = await axiosInstance.post<AuthResponse>('/users', {
-        username,
-        password,
-        email,
+      const signUpResponse = await axiosInstance.post('/register', {
+        "idx":0,
+        "username": username,
+        "password_hash": password,
+        "email": email
       });
-
-      // Store token in localStorage if provided
-      if (response.data.token) {
-        localStorage.setItem('authToken', response.data.token);
+      if (signUpResponse.status==201) {
+          const loginResponse = await api.login(username, password);
+          console.log("Logged In: ", loginResponse.username);
+          if (loginResponse.success == true) {
+              const response: AuthResponse = {
+                success: true,
+                username: loginResponse.username
+              }
+              console.log("Response: ", response.username);
+              return response;
+          }
       }
-
-      return response.data;
+      
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error('Sign up error:', error.response?.data || error.message);
