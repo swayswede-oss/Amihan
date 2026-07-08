@@ -25,22 +25,22 @@ export function getVehicleMarkerPosition(index: number) {
 */
 
 export function MapView() {
-
+  
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-
+  const [mapColor, setMapColor] = useState<boolean>(false);
   const [polyString, setPolyString] = useState<string>("");
-
+  const [mapStyleLayer, setMapStyleLayer] = useState<any>(null);
   useEffect(() => {
       // only init map if the DOM element exists but the map hasn't been built yet
       if (mapContainerRef.current && !mapInstanceRef.current) {
         const map = L.map(mapContainerRef.current)
         mapInstanceRef.current = map;
-      
-        (L as any).maplibreGL({
+        const newMapStyle = (L as any).maplibreGL({
           style:'https://tiles.openfreemap.org/styles/positron',
           attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
+        setMapStyleLayer(newMapStyle);
       }
 
       async function loadPolyString() {
@@ -73,17 +73,26 @@ export function MapView() {
           lineJoin: 'round',
           lineCap: 'round'
       }).addTo(map);
-    
       return () => {
           map.removeLayer(fetchedLine);
       
       };
   }, [polyString]);
- 
- 
+
+  function handleColorChange() {
+      const currMapLayer = (mapStyleLayer as any).getMaplibreMap()
+      const currColor = mapColor ? "positron" : "dark"
+      currMapLayer.setStyle("https://tiles.openfreemap.org/styles/" + currColor);
+      setMapColor(!mapColor);
+      
+  }
   return (
     <div style={{ width:'100%', height:'100%' }}>
-      <h1 style={{height: '5%'}}>Map View</h1>
+      <h1>Map View</h1>
+      <label htmlFor="map-color">Make Map Dark Mode</label>
+      <input type="checkbox" id="map-color"
+        onChange={handleColorChange}
+        />
       <div ref={mapContainerRef} style={{ width: '100%', height: '95%'}} />
     </div>
 
