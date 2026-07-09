@@ -7,15 +7,12 @@ import L from 'leaflet';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-leaflet';
 import { api } from '../../services/api';
-/*
+
 type MapViewProps = {
-  vehicles: Vehicle[];
-  onSelectVehicle: (vehicle: Vehicle) => void;
-  focusedVehicleId?: string | null;
-};
+  mapType: string;
+}
 
-const ZOOM_SCALE = 2.5;
-
+/*
 export function getVehicleMarkerPosition(index: number) {
   return {
     left: 15 + (index % 4) * 20,
@@ -24,13 +21,20 @@ export function getVehicleMarkerPosition(index: number) {
 }
 */
 
-export function MapView() {
-  
+export function MapView({ mapType }) {
+
+  // map container and instance references  
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  const [mapColor, setMapColor] = useState<boolean>(false);
+
+  // display data layers
   const [polyString, setPolyString] = useState<string>("");
+  const [recentLocations, setRecentLocations] = useState<Array<[number, number]> | null>(null);
+
+  // set map tile layer
   const [mapStyleLayer, setMapStyleLayer] = useState<any>(null);
+  const [mapColor, setMapColor] = useState<boolean>(false);
+
   useEffect(() => {
       // only init map if the DOM element exists but the map hasn't been built yet
       if (mapContainerRef.current && !mapInstanceRef.current) {
@@ -43,11 +47,23 @@ export function MapView() {
         setMapStyleLayer(newMapStyle);
       }
 
-      async function loadPolyString() {
-        const data = await api.getTestPolyline();
-        setPolyString(data);
+      if (mapType == "vlm") {
+        // fetch polyline data
+        async function loadPolyString() {
+          const data = await api.getTestPolyline();
+          setPolyString(data);
+        }        
+        loadPolyString();
+      } else if (mapType == "vdm") {
+        // fetch recent location data
+        async function loadRecentLocations() {
+          const data = await api.getMostRecentLocations();
+          setRecentLocations(data);
+        }      
+        loadRecentLocations();        
       }
-      loadPolyString();
+
+      
        return () => {
          if (mapInstanceRef.current) {
            mapInstanceRef.current.remove();
@@ -57,27 +73,53 @@ export function MapView() {
       
   }, []);
 
-  useEffect(() => {
-      const map = mapInstanceRef.current;
-      if (!map || polyString == "") return;
+  // build VLM map layer with polyline
+  if (mapType == "vlm") {
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!map || polyString == "") return;
 
-      const coords: Array<[number, number]> = polyline.decode(polyString);
-      const firstPoint = coords[0];
-      map.setView([firstPoint[0], firstPoint[1]], 17);
-      
-      // set parameters for the polyline
-      const fetchedLine = L.polyline(coords, {
-          color: '#FF0000',
-          weight: 5,
-          opacity: 0.75,
-          lineJoin: 'round',
-          lineCap: 'round'
-      }).addTo(map);
-      return () => {
-          map.removeLayer(fetchedLine);
-      
-      };
-  }, [polyString]);
+        const coords: Array<[number, number]> = polyline.decode(polyString);
+        const firstPoint = coords[0];
+        map.setView([firstPoint[0], firstPoint[1]], 17);
+        
+        // set parameters for the polyline
+        const fetchedLine = L.polyline(coords, {
+            color: '#FF0000',
+            weight: 5,
+            opacity: 0.75,
+            lineJoin: 'round',
+            lineCap: 'round'
+        }).addTo(map);
+        return () => {
+            map.removeLayer(fetchedLine);
+        
+        };
+    }, [polyString]);    
+  }
+
+  // build VDM map layer with coordinates
+  if (mapType == "vdm") {
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!map || !recentLocations) return;
+
+        const firstPoint = recentLocations[0][1];
+        console.log(firstPoint);
+        map.setView([firstPoint.lat, firstPoint.lon], 17);
+
+        const markers = [];
+        for (let point of recentLocations) {
+          const marker = L.marker([point[1].lat, point[1].lon]).bindPopup(`Vehicle Name: ${point[0]}<br>Last seen at: ${point[1].address}`);
+          markers.push(marker);
+        }
+        const markersGroup = L.featureGroup(markers).addTo(map);
+        return () => {
+          map.removeLayer(markersGroup);
+        };
+    }, [recentLocations]);
+  }
+  
 
   function handleColorChange() {
       const currMapLayer = (mapStyleLayer as any).getMaplibreMap()
@@ -87,15 +129,14 @@ export function MapView() {
       
   }
   return (
-    <div style={{ width:'100%', height:'100%' }}>
-      <h1>Map View</h1>
+    <div style={{ width:'100%', height:'95%' }}>
+      <h1 style={{height: '5%'}}>Map View</h1>
       <label htmlFor="map-color">Make Map Dark Mode</label>
       <input type="checkbox" id="map-color"
         onChange={handleColorChange}
         />
       <div ref={mapContainerRef} style={{ width: '100%', height: '95%'}} />
     </div>
-
   )
 }
 

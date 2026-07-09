@@ -99,7 +99,25 @@ export const api = {
       console.log(error);
       return "Couldn't get polyline";
     }
-      },
+  },
+
+  getMostRecentLocations: async(): Promise<Array<[number, number]>> => {
+    const token = jwtDecode(localStorage.getItem("authToken"));
+    const currUser = token["username"];
+    try {
+      const path = "/api/getRecentUser/" + currUser;
+      const response = await axiosInstance.get(path);
+      if (response.status == 200) {
+        return response.data;
+      } else {
+        return "Couldn't get user locations";
+      }
+    } catch (error) {
+      console.log(error);
+      return "Couldn't get user locations";
+    }
+    return currUser;
+  },
 
   // Sign up function
   signUp: async (username: string, password: string, email: string): Promise<AuthResponse> => {

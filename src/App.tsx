@@ -177,9 +177,7 @@ export default function App() {
         {currentView === 'map' && (
           <div style={{ height: 'calc(100vh - 64px - 104px)' }} className="overflow-hidden">
             <MapView
-              vehicles={mockVehicles}
-              onSelectVehicle={setSelectedVehicle}
-              focusedVehicleId={focusedVehicleId}
+                mapType="vdm"
             />
           </div>
         )}
