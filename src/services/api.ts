@@ -101,6 +101,21 @@ export const api = {
     }
   },
 
+  getPolyline: async(tripId): Promise<string> => {
+    try {
+      const path = "/api/getPolyline/" + tripId;
+      const response = await axiosInstance.get(path);
+      if (response.status == 200 ) {
+        return response.data;
+      } else {
+        return "Couldn't get polyline";
+      }
+    } catch (error) {
+      console.log(error);
+      return "Couldn't get polyline";
+    }
+  },
+  
   getMostRecentLocations: async(): Promise<Array<[number, number]>> => {
     const token = jwtDecode(localStorage.getItem("authToken"));
     const currUser = token["username"];

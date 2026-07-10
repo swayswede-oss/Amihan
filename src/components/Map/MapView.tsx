@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import React,{ useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MapPin } from 'lucide-react';
 import { Vehicle } from '../../App';
 import 'leaflet/dist/leaflet.css';
@@ -10,6 +11,29 @@ import { api } from '../../services/api';
 
 type MapViewProps = {
   mapType: string;
+}
+
+function VehiclePopupCard({ id, data, changeType, popupType })  {
+  if (popupType == "vdm") {
+    return (
+      <div style={{ minWidth: '160px'}}>
+        <p>Vehicle Name: {id}</p>
+        <p>Last Seen: {data}</p>
+        <button onClick={() => changeType()} style={{ cursor: 'pointer' }}>View Most Recent Trip</button>
+      </div>
+    )    
+  } else if (popupType == "vlm") {
+      const rawDate = new Date(data[1]);
+      const formattedDate = new Intl.DateTimeFormat('en-US').format(rawDate);
+      return (
+        <div style={{ minWidth: '160px'}}>
+          <p>Vehicle Name: {id}</p>
+          <p>Trip ID: {data[0]}</p>
+          <p>Trip Date: {formattedDate}</p>
+          <button onClick={() => changeType()} style={{ cursor: 'pointer' }}>View Most Recent Locations</button>
+        </div>
+      )     
+  }
 }
 
 /*
@@ -27,15 +51,26 @@ export function MapView({ mapType }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
+  // VDM vs VLM state toggle
+  const [currMapType, setCurrMapType] = useState<string>(mapType);
+
   // display data layers
-  const [polyString, setPolyString] = useState<string>("");
-  const [recentLocations, setRecentLocations] = useState<Array<[number, number]> | null>(null);
+  const [polyString, setPolyString] = useState<string>(""); // VLM polyline
+  const [selectedVehicle, setSelectedVehicle] = useState<string>("") // User selected Vehicle
+  const [selectedTrip, setSelectedTrip] = useState<string>("") 
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [recentLocations, setRecentLocations] = useState<Array<[number, number]> | null>(null); // VDM coordinate array
 
   // set map tile layer
   const [mapStyleLayer, setMapStyleLayer] = useState<any>(null);
   const [mapColor, setMapColor] = useState<boolean>(false);
 
+  // popup layers
+  const [activePopups, setActivePopups] = useState([]);
+
+  console.log("draws page");
   useEffect(() => {
+      console.log("draws map");
       // only init map if the DOM element exists but the map hasn't been built yet
       if (mapContainerRef.current && !mapInstanceRef.current) {
         const map = L.map(mapContainerRef.current)
@@ -47,14 +82,14 @@ export function MapView({ mapType }) {
         setMapStyleLayer(newMapStyle);
       }
 
-      if (mapType == "vlm") {
+      if (currMapType == "vlm") {
         // fetch polyline data
         async function loadPolyString() {
-          const data = await api.getTestPolyline();
+          const data = await api.getPolyline(selectedTrip);
           setPolyString(data);
         }        
         loadPolyString();
-      } else if (mapType == "vdm") {
+      } else if (currMapType == "vdm") {
         // fetch recent location data
         async function loadRecentLocations() {
           const data = await api.getMostRecentLocations();
@@ -71,18 +106,20 @@ export function MapView({ mapType }) {
          }
        };
       
-  }, []);
+  }, [currMapType]);
 
   // build VLM map layer with polyline
-  if (mapType == "vlm") {
+  if (currMapType == "vlm") {
     useEffect(() => {
         const map = mapInstanceRef.current;
         if (!map || polyString == "") return;
 
         const coords: Array<[number, number]> = polyline.decode(polyString);
         const firstPoint = coords[0];
+        console.log(firstPoint);
         map.setView([firstPoint[0], firstPoint[1]], 17);
-        
+
+                
         // set parameters for the polyline
         const fetchedLine = L.polyline(coords, {
             color: '#FF0000',
@@ -91,6 +128,19 @@ export function MapView({ mapType }) {
             lineJoin: 'round',
             lineCap: 'round'
         }).addTo(map);
+       
+        const popupDiv = document.createElement('div');
+        fetchedLine.bindPopup(popupDiv, { minWidth: 160} );
+        fetchedLine.on('popupopen', () => {
+            setActivePopups((prev) => [
+              ...prev,
+              { id: selectedVehicle, data: [selectedTrip, selectedDate], container: popupDiv }
+            ]);
+          });
+
+          fetchedLine.on('popupclose', () => {
+            setActivePopups((prev) => prev.filter((p) => p.id !== p.id));
+          })        
         return () => {
             map.removeLayer(fetchedLine);
         
@@ -99,18 +149,36 @@ export function MapView({ mapType }) {
   }
 
   // build VDM map layer with coordinates
-  if (mapType == "vdm") {
+  if (currMapType == "vdm") {
     useEffect(() => {
         const map = mapInstanceRef.current;
         if (!map || !recentLocations) return;
 
+        // center point for map initialization
         const firstPoint = recentLocations[0][1];
-        console.log(firstPoint);
         map.setView([firstPoint.lat, firstPoint.lon], 17);
 
+        // iterate through all most recent points and add them to the map
         const markers = [];
         for (let point of recentLocations) {
           const marker = L.marker([point[1].lat, point[1].lon]).bindPopup(`Vehicle Name: ${point[0]}<br>Last seen at: ${point[1].address}`);
+          const popupDiv = document.createElement('div');
+          marker.bindPopup(popupDiv, { minWidth: 160});
+
+          marker.on('popupopen', () => {
+            setActivePopups((prev) => [
+              ...prev,
+              { id: point[0], data: point[1].address, container: popupDiv }
+            ]);
+            setSelectedVehicle(point[0])
+            setSelectedTrip(point[1].trip_id);
+            setSelectedDate(point[1].timestamp);
+          });
+
+          marker.on('popupclose', () => {
+            setActivePopups((prev) => prev.filter((p) => p.id !== p.id));
+          });
+          
           markers.push(marker);
         }
         const markersGroup = L.featureGroup(markers).addTo(map);
@@ -119,7 +187,7 @@ export function MapView({ mapType }) {
         };
     }, [recentLocations]);
   }
-  
+   
 
   function handleColorChange() {
       const currMapLayer = (mapStyleLayer as any).getMaplibreMap()
@@ -127,6 +195,16 @@ export function MapView({ mapType }) {
       currMapLayer.setStyle("https://tiles.openfreemap.org/styles/" + currColor);
       setMapColor(!mapColor);
       
+  }
+
+  function handleMapTypeSwitch() {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+      if (currMapType == "vdm") {
+        setCurrMapType("vlm");
+      } else if (currMapType == "vlm") {
+        setCurrMapType("vdm");        
+      }
   }
   return (
     <div style={{ width:'100%', height:'95%' }}>
@@ -136,6 +214,11 @@ export function MapView({ mapType }) {
         onChange={handleColorChange}
         />
       <div ref={mapContainerRef} style={{ width: '100%', height: '95%'}} />
+      {activePopups.map(({ id, data, container}) =>
+        createPortal(
+          <VehiclePopupCard id={id} data={data} changeType={handleMapTypeSwitch} popupType={currMapType}/>, container
+        )
+      )}
     </div>
   )
 }
