@@ -36,19 +36,7 @@ function VehiclePopupCard({ id, data, changeType, popupType })  {
   }
 }
 
-/*
-export function getVehicleMarkerPosition(index: number) {
-  return {
-    left: 15 + (index % 4) * 20,
-    top: 20 + Math.floor(index / 4) * 25,
-  };
-}
-*/
-
 export function MapView({ mapType }) {
-
-  
-  
 
   // map container and instance references  
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -59,6 +47,7 @@ export function MapView({ mapType }) {
 
   // display data layers
   const [polyString, setPolyString] = useState<string>(""); // VLM polyline
+  const [rawCoords, setRawCoords] = useState<Array<[number, number]> | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<string>("") // User selected Vehicle
   const [selectedTrip, setSelectedTrip] = useState<string>("") 
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -71,8 +60,9 @@ export function MapView({ mapType }) {
   // popup layers
   const [activePopups, setActivePopups] = useState([]);
 
-  // empty list conditional
+  // empty vehicle list conditional
   const [isEmptyList, setIsEmptyList] = useState<boolean>(false);
+
   // handle if no vehicles exist
   useEffect(() => {
     async function getUserVehiclesCount() {
@@ -97,53 +87,70 @@ export function MapView({ mapType }) {
       setMapStyleLayer(newMapStyle);
     }
 
+    return () => {
+       if (mapInstanceRef.current) {
+         mapInstanceRef.current.remove();
+         mapInstanceRef.current = null;
+       }
+     };    
+  }, []);
+
+  useEffect(() => {
     if (currMapType == "vlm") {
+      setRecentLocations(null); // reset state
       // fetch polyline data
       async function loadPolyString() {
         const data = await api.getPolyline(selectedTrip);
+        if (data == "INVALID") {
+          const defaultTrips = await api.getTripLocations(selectedTrip);
+          setRawCoords(defaultTrips);
+        }
         setPolyString(data);
       }        
       loadPolyString();
     } else if (currMapType == "vdm") {
       // fetch recent location data
       async function loadRecentLocations() {
+        setPolyString(""); // reset state
+        setRawCoords(null); // reset state
         const data = await api.getMostRecentLocations();
         setRecentLocations(data);
       }      
       loadRecentLocations();        
     }
-
-    
-     return () => {
-       if (mapInstanceRef.current) {
-         mapInstanceRef.current.remove();
-         mapInstanceRef.current = null;
-       }
-     };
     
   }, [currMapType]);
 
   // build VLM map layer with polyline
   useEffect(() => {
-
     if (currMapType == "vlm" && isEmptyList == false) {
       const map = mapInstanceRef.current;
       if (!map || polyString == "") return;
 
-      const coords: Array<[number, number]> = polyline.decode(polyString);
+      // handle "not enough points" case;
+      var coords: Array<[number, number]>;
+      var fetchedLine;
+      if (polyString != "INVALID") {
+          coords = polyline.decode(polyString);
+      } else {
+          coords = rawCoords;
+      }
       const firstPoint = coords[0];
-      map.setView([firstPoint[0], firstPoint[1]], 17);
-
-              
       // set parameters for the polyline
-      const fetchedLine = L.polyline(coords, {
+      if (polyString != "INVALID") {
+        map.setView([firstPoint[0], firstPoint[1]], 17);
+        fetchedLine = L.polyline(coords, {
           color: '#FF0000',
           weight: 5,
           opacity: 0.75,
           lineJoin: 'round',
           lineCap: 'round'
-      }).addTo(map);
-     
+        }).addTo(map);        
+      } else {
+        map.setView([firstPoint.lat, firstPoint.lon], 17);
+        fetchedLine = L.marker([firstPoint.lat, firstPoint.lon], 17).addTo(map);
+      }
+      
       const popupDiv = document.createElement('div');
       fetchedLine.bindPopup(popupDiv, { minWidth: 160} );
       fetchedLine.on('popupopen', () => {
@@ -154,17 +161,21 @@ export function MapView({ mapType }) {
         });
 
         fetchedLine.on('popupclose', () => {
-          setActivePopups((prev) => prev.filter((p) => p.id !== p.id));
+          setActivePopups((prev) => prev.filter((p) => p.container !== popupDiv));
         })        
       return () => {
           map.removeLayer(fetchedLine);
-      
+          setPolyString("");
       };
     }
-  }, [polyString]);    
+  }, [polyString, rawCoords]);    
 
   // build VDM map layer with coordinates
   useEffect(() => {
+
+    console.log(rawCoords);
+    console.log(polyString);
+    console.log(currMapType);
     if (currMapType == "vdm" && isEmptyList == false) {
       const map = mapInstanceRef.current;
       if (!map || !recentLocations) return;
@@ -191,7 +202,7 @@ export function MapView({ mapType }) {
         });
 
         marker.on('popupclose', () => {
-          setActivePopups((prev) => prev.filter((p) => p.id !== p.id));
+          setActivePopups((prev) => prev.filter((p) => p.container !== popupDiv));
         });
         
         markers.push(marker);
@@ -213,8 +224,7 @@ export function MapView({ mapType }) {
   }
 
   function handleMapTypeSwitch() {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
+      setActivePopups([]); // clear active popups state without drawing a new map
       if (currMapType == "vdm") {
         setCurrMapType("vlm");
       } else if (currMapType == "vlm") {

@@ -108,11 +108,11 @@ export const api = {
       if (response.status == 200 ) {
         return response.data;
       } else {
-        return "Couldn't get polyline";
+        return "INVALID";
       }
     } catch (error) {
       console.log(error);
-      return "Couldn't get polyline";
+      return "INVALID";
     }
   },
   
@@ -149,8 +149,22 @@ export const api = {
       return "An error occurred fetching user locations";
     }
   },
-  
 
+  getTripLocations: async(tripId): Promise<Array<[number, number]>> => {
+    try {
+      const path = "/api/getAllTripLocs/" + tripId;
+      const response = await axiosInstance.get(path);
+      if (response.status == 200) {
+        return response.data
+      } else {
+        return "Couldn't fetch trip locations"
+      }
+    } catch (error) {
+      console.log(error);
+      return "An error occurred fetching trip locations";
+    }    
+  },
+  
   // Sign up function
   signUp: async (username: string, password: string, email: string): Promise<AuthResponse> => {
     try {
