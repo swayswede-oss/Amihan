@@ -59,21 +59,6 @@ export function MapView({ mapType }) {
 
   // popup layers
   const [activePopups, setActivePopups] = useState([]);
-
-  // empty vehicle list conditional
-  const [isEmptyList, setIsEmptyList] = useState<boolean>(false);
-
-  // handle if no vehicles exist
-  useEffect(() => {
-    async function getUserVehiclesCount() {
-      const userVehicles = await api.getUserVehicles();
-      if (userVehicles.length < 1) {
-        setIsEmptyList(true);
-      }
-    }
-    getUserVehiclesCount();    
-  }, [isEmptyList]);
-  
   
   useEffect(() => {
     // only init map if the DOM element exists but the map hasn't been built yet
@@ -85,6 +70,7 @@ export function MapView({ mapType }) {
         attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       }).addTo(map);
       setMapStyleLayer(newMapStyle);
+      map.setView([37.75454, -122.44254], 13);
     }
 
     return () => {
@@ -115,15 +101,19 @@ export function MapView({ mapType }) {
         setRawCoords(null); // reset state
         const data = await api.getMostRecentLocations();
         setRecentLocations(data);
-      }      
-      loadRecentLocations();        
+      }
+      loadRecentLocations();
+      const timer = setInterval(() => {
+        loadRecentLocations();        
+      }, 5000);
+      return () => clearInterval(timer);
     }
     
   }, [currMapType]);
-
+  
   // build VLM map layer with polyline
   useEffect(() => {
-    if (currMapType == "vlm" && isEmptyList == false) {
+    if (currMapType == "vlm") {
       const map = mapInstanceRef.current;
       if (!map || polyString == "") return;
 
@@ -172,14 +162,9 @@ export function MapView({ mapType }) {
 
   // build VDM map layer with coordinates
   useEffect(() => {
-
-    console.log(rawCoords);
-    console.log(polyString);
-    console.log(currMapType);
-    if (currMapType == "vdm" && isEmptyList == false) {
+    if (currMapType == "vdm") {
       const map = mapInstanceRef.current;
-      if (!map || !recentLocations) return;
-
+      if (!map || !recentLocations || recentLocations.length == 0) return;
       // center point for map initialization
       const firstPoint = recentLocations[0][1];
       map.setView([firstPoint.lat, firstPoint.lon], 17);
@@ -231,13 +216,7 @@ export function MapView({ mapType }) {
         setCurrMapType("vdm");        
       }
   }
-  if (isEmptyList) {
-    return (
-      <div>
-        <h1>You have no registered vehicles</h1>
-      </div>
-    )
-  }
+  
   return (
     <div style={{ width:'100%', height:'95%' }}>
       <h1 style={{height: '5%'}}>Map View</h1>
