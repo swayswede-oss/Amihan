@@ -166,13 +166,13 @@ export function MapView({ mapType }) {
       const map = mapInstanceRef.current;
       if (!map || !recentLocations || recentLocations.length == 0) return;
       // center point for map initialization
-      const firstPoint = recentLocations[0][1];
-      map.setView([firstPoint.lat, firstPoint.lon], 17);
+      // const firstPoint = recentLocations[0][1];
+      // map.setView([firstPoint.lat, firstPoint.lon], 17);
 
       // iterate through all most recent points and add them to the map
       const markers = [];
       for (let point of recentLocations) {
-        const marker = L.marker([point[1].lat, point[1].lon]).bindPopup(`Vehicle Name: ${point[0]}<br>Last seen at: ${point[1].address}`);
+        const marker = L.marker([point[1].lat, point[1].lon]).bindPopup();
         const popupDiv = document.createElement('div');
         marker.bindPopup(popupDiv, { minWidth: 160});
 
@@ -193,6 +193,7 @@ export function MapView({ mapType }) {
         markers.push(marker);
       }
       const markersGroup = L.featureGroup(markers).addTo(map);
+      map.fitBounds(markersGroup.getBounds(), { padding: [50, 50] });
       return () => {
         map.removeLayer(markersGroup);
       };
