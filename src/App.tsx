@@ -175,7 +175,7 @@ export default function App() {
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
         {currentView === 'map' && (
-          <div style={{ height: 'calc(100vh - 64px - 104px)' }} className="overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <MapView
                 mapType="vdm"
             />

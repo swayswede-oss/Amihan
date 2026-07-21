@@ -1,6 +1,6 @@
-import React,{ useEffect, useRef, useState } from 'react';
+import React,{ useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MapPin } from 'lucide-react';
+import { Search, Maximize, Minimize2 } from 'lucide-react';
 import { Vehicle } from '../../App';
 import 'leaflet/dist/leaflet.css';
 import polyline from '@mapbox/polyline';
@@ -11,6 +11,51 @@ import { api } from '../../services/api';
 
 type MapViewProps = {
   mapType: string;
+}
+
+// Header palette matched to design reference (cool dark slate-gray)
+const MAP_HEADER_BG = '#4A5364';
+const MAP_HEADER_CONTROL_BG = '#3F4756';
+const MAP_HEADER_BORDER = '#454E5E';
+const MAP_HEADER_MUTED_TEXT = '#A0AEC0';
+const MAP_HEADER_CONTROL_HEIGHT = 36;
+
+const mapHeaderControlStyle: React.CSSProperties = {
+  height: `${MAP_HEADER_CONTROL_HEIGHT}px`,
+  color: '#E2E8F0',
+  backgroundColor: MAP_HEADER_CONTROL_BG,
+  border: `1px solid ${MAP_HEADER_BORDER}`,
+  lineHeight: 1,
+  fontSize: '14px',
+  boxSizing: 'border-box',
+};
+
+const MAP_ATTRIBUTION =
+  '&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+const MAP_STYLE_URLS = {
+  light: 'https://tiles.openfreemap.org/styles/positron',
+  dark: 'https://tiles.openfreemap.org/styles/dark',
+} as const;
+
+const MAP_FOCUS_ZOOM = 15;
+
+function elevateLeafletOverlayPanes(map: L.Map) {
+  const paneZIndexes: Record<string, string> = {
+    overlayPane: '450',
+    markerPane: '600',
+    tooltipPane: '650',
+    popupPane: '700',
+  };
+
+  Object.entries(paneZIndexes).forEach(
+    ([paneName, zIndex]) => {
+      const pane = map.getPane(paneName);
+      if (pane) {
+        pane.style.zIndex = zIndex;
+      }
+    },
+  );
 }
 
 function VehiclePopupCard({ id, data, changeType, popupType })  {
@@ -38,9 +83,16 @@ function VehiclePopupCard({ id, data, changeType, popupType })  {
 
 export function MapView({ mapType }) {
 
-  // map container and instance references  
+  // map container and instance references
+  const mapModuleRef = useRef<HTMLDivElement | null>(null);  
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const vehicleMarkersRef = useRef<Map<string, L.Marker>>(
+    new Map(),
+  );
+  const markersLayerRef = useRef<L.FeatureGroup | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement | null>(null);
+  const [mapReady, setMapReady] = useState<boolean>(false);
 
   // VDM vs VLM state toggle
   const [currMapType, setCurrMapType] = useState<string>(mapType);
@@ -57,6 +109,14 @@ export function MapView({ mapType }) {
   const [mapStyleLayer, setMapStyleLayer] = useState<any>(null);
   const [mapColor, setMapColor] = useState<boolean>(false);
 
+  // toggle states
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
+  const [highlightedVehicle, setHighlightedVehicle] = useState<string | null>(null);
+
+  const lastMarkerFitLocationsRef = useRef<Array<number, number> | null>(null);
+    
   // popup layers
   const [activePopups, setActivePopups] = useState([]);
   
@@ -66,20 +126,100 @@ export function MapView({ mapType }) {
       const map = L.map(mapContainerRef.current)
       mapInstanceRef.current = map;
       const newMapStyle = (L as any).maplibreGL({
-        style:'https://tiles.openfreemap.org/styles/positron',
-        attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        style: MAP_STYLE_URLS.light,
+        attribution: MAP_ATTRIBUTION,
       }).addTo(map);
       setMapStyleLayer(newMapStyle);
       map.setView([37.75454, -122.44254], 13);
+      setMapReady(true);
     }
 
     return () => {
        if (mapInstanceRef.current) {
          mapInstanceRef.current.remove();
          mapInstanceRef.current = null;
+         setMapReady(false);
        }
      };    
   }, []);
+
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container) return;
+
+    const resizeMap = () => {
+      mapInstanceRef.current?.invalidateSize();
+    };
+
+    const observer = new ResizeObserver(resizeMap);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isActive =
+        document.fullscreenElement === mapModuleRef.current;
+
+      setIsFullscreen(isActive);
+      mapInstanceRef.current?.invalidateSize();
+    };
+
+    document.addEventListener(
+      'fullscreenchange',
+      handleFullscreenChange,
+    );
+
+    return () => {
+      document.removeEventListener(
+        'fullscreenchange',
+        handleFullscreenChange,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(
+          event.target as Node,
+        )
+      ) {
+        setShowSearchResults(false);
+      }
+    }
+
+    document.addEventListener(
+      'mousedown',
+      handlePointerDown,
+    );
+
+    return () => {
+      document.removeEventListener(
+        'mousedown',
+        handlePointerDown,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!highlightedVehicle) {
+      return;
+    }
+
+    const marker = vehicleMarkersRef.current.get(
+      highlightedVehicle,
+    );
+    const markerElement = marker?.getElement();
+
+    if (markerElement) {
+      markerElement.classList.add(
+        'map-marker-highlighted',
+      );
+    }
+  }, [highlightedVehicle, recentLocations]);
 
   useEffect(() => {
     if (currMapType == "vlm") {
@@ -158,48 +298,269 @@ export function MapView({ mapType }) {
           setPolyString("");
       };
     }
-  }, [polyString, rawCoords]);    
+  }, [polyString, rawCoords, currMapType, selectedTrip]);    
 
   // build VDM map layer with coordinates
-  useEffect(() => {
-    if (currMapType == "vdm") {
+    const renderVehicleMarkers = useCallback(
+    (fitToFleet = false) => {
       const map = mapInstanceRef.current;
-      if (!map || !recentLocations || recentLocations.length == 0) return;
-      // center point for map initialization
-      // const firstPoint = recentLocations[0][1];
-      // map.setView([firstPoint.lat, firstPoint.lon], 17);
+      const locations = recentLocations;
 
-      // iterate through all most recent points and add them to the map
-      const markers = [];
-      for (let point of recentLocations) {
-        const marker = L.marker([point[1].lat, point[1].lon]).bindPopup();
-        const popupDiv = document.createElement('div');
-        marker.bindPopup(popupDiv, { minWidth: 160});
+      if (!map || !mapReady) {
+        return;
+      }
+
+      if (currMapType !== 'vdm') {
+        if (markersLayerRef.current) {
+          map.removeLayer(markersLayerRef.current);
+          markersLayerRef.current = null;
+        }
+
+        vehicleMarkersRef.current.clear();
+        return;
+      }
+
+      if (markersLayerRef.current) {
+        map.removeLayer(markersLayerRef.current);
+        markersLayerRef.current = null;
+      }
+
+      vehicleMarkersRef.current.clear();
+
+      if (!locations || locations.length === 0) {
+        return;
+      }
+
+      const markers: L.Marker[] = [];
+      const firstPoint = locations[0][1];
+
+      for (const point of locations) {
+        const marker = L.marker([
+          point[1].lat,
+          point[1].lon,
+        ]);
+
+        vehicleMarkersRef.current.set(
+          point[0],
+          marker,
+        );
+
+        const popupDiv =
+          document.createElement('div');
+
+        marker.bindPopup(popupDiv, {
+          minWidth: 160,
+        });
 
         marker.on('popupopen', () => {
           setActivePopups((prev) => [
             ...prev,
-            { id: point[0], data: point[1].address, container: popupDiv }
+            {
+              id: point[0],
+              data: point[1].address,
+              container: popupDiv,
+            },
           ]);
-          setSelectedVehicle(point[0])
+
+          setSelectedVehicle(point[0]);
           setSelectedTrip(point[1].trip_id);
           setSelectedDate(point[1].timestamp);
         });
 
         marker.on('popupclose', () => {
-          setActivePopups((prev) => prev.filter((p) => p.container !== popupDiv));
+          setActivePopups((prev) =>
+            prev.filter(
+              (popup) =>
+                popup.container !== popupDiv,
+            ),
+          );
         });
-        
+
         markers.push(marker);
       }
-      const markersGroup = L.featureGroup(markers).addTo(map);
-      map.fitBounds(markersGroup.getBounds(), { padding: [50, 50] });
-      return () => {
-        map.removeLayer(markersGroup);
-      };
+
+      markersLayerRef.current = L.featureGroup(markers).addTo(map);
+      elevateLeafletOverlayPanes(map);
+
+      const shouldFitBounds =
+        fitToFleet ||
+        lastMarkerFitLocationsRef.current !== locations;
+
+      if (shouldFitBounds) {
+        if (locations.length > 1) {
+          map.fitBounds(
+            markersLayerRef.current
+              .getBounds()
+              .pad(0.12),
+          );
+        } else {
+          map.setView(
+            [firstPoint.lat, firstPoint.lon],
+            17,
+          );
+        }
+        lastMarkerFitLocationsRef.current = locations;
+      }
+    }, [currMapType, mapReady, recentLocations]);
+
+  useEffect(() => {
+    renderVehicleMarkers(true);
+  }, [renderVehicleMarkers]);
+
+  const renderVehicleMarkersRef = useRef(
+    renderVehicleMarkers,
+  );
+  renderVehicleMarkersRef.current = renderVehicleMarkers;
+
+  function getSearchMatches(): Array<[number, number]>{
+    const query = searchQuery.trim().toLowerCase();
+    if (!query || !recentLocations) {
+      return [];
     }
-  }, [recentLocations]);
-   
+
+    return recentLocations.filter(([name]) =>
+      name.toLowerCase().includes(query),
+    );
+  }
+
+  function clearMarkerHighlight() {
+    vehicleMarkersRef.current.forEach((marker) => {
+      marker
+        .getElement()
+        ?.classList.remove('map-marker-highlighted');
+    });
+  }
+
+  function focusVehicle(vehicleName: string) {
+    const map = mapInstanceRef.current;
+    const marker = vehicleMarkersRef.current.get(
+      vehicleName,
+    );
+    const locationEntry = recentLocations.find(
+      ([name]) => name === vehicleName,
+    );
+
+    if (
+      !map ||
+      !marker ||
+      !locationEntry ||
+      currMapType !== 'vdm'
+    ) {
+      return;
+    }
+
+    const { lat, lon } = locationEntry[1];
+
+    clearMarkerHighlight();
+    setHighlightedVehicle(vehicleName);
+
+    map.setView([lat, lon], MAP_FOCUS_ZOOM, {
+      animate: true,
+    });
+
+    marker.getElement()?.classList.add(
+      'map-marker-highlighted',
+    );
+    marker.openPopup();
+  }
+
+  function selectSearchResult(vehicleName: string) {
+    setSearchQuery(vehicleName);
+    setShowSearchResults(false);
+    focusVehicle(vehicleName);
+  }
+
+  function handleSearchKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key !== 'Enter') {
+      return;
+    }
+
+    event.preventDefault();
+
+    const query = searchQuery.trim().toLowerCase();
+    const exactMatch = recentLocations.find(
+      ([name]) => name.toLowerCase() === query,
+    );
+
+    if (exactMatch) {
+      selectSearchResult(exactMatch[0]);
+    }
+  }
+
+  const searchMatches = getSearchMatches();
+
+  function setMapStyle(useDark: boolean) {
+    const map = mapInstanceRef.current;
+    const currentStyleLayer = mapStyleLayer;
+
+    if (!map || !currentStyleLayer || mapColor === useDark) {
+      return;
+    }
+
+    const maplibreMap =
+      currentStyleLayer.getMaplibreMap?.();
+
+    if (!maplibreMap) {
+      return;
+    }
+
+    const nextStyleUrl = useDark
+      ? MAP_STYLE_URLS.dark
+      : MAP_STYLE_URLS.light;
+
+    const restoreMapView = () => {
+      if (!mapInstanceRef.current) {
+        return;
+      }
+
+      const mapCanvas = maplibreMap.getCanvas?.();
+
+      if (mapCanvas?.parentElement) {
+        mapCanvas.parentElement.style.zIndex = '1';
+      }
+
+      map.invalidateSize();
+      elevateLeafletOverlayPanes(map);
+      renderVehicleMarkersRef.current(false);
+    };
+
+    maplibreMap.once('idle', restoreMapView);
+    maplibreMap.setStyle(nextStyleUrl);
+    setMapColor(useDark);
+  }
+
+  function toggleVlmMode() {
+    setIsVlmToggleActive((prev) => !prev);
+  }
+
+  async function toggleFullscreen() {
+    const mapModule = mapModuleRef.current;
+    if (!mapModule) {
+      return;
+    }
+
+    try {
+      if (document.fullscreenElement === mapModule) {
+        await document.exitFullscreen();
+      } else {
+        await mapModule.requestFullscreen();
+      }
+    } catch (error) {
+      console.error('Unable to toggle fullscreen:', error);
+    }
+  }
+
+  function handleMapTypeSwitch() {
+    setActivePopups([]);
+
+    if (currMapType == 'vdm') {
+      setCurrMapType('vlm');
+    } else if (currMapType == 'vlm') {
+      setCurrMapType('vdm');
+    }
+  }
 
   function handleColorChange() {
       const currMapLayer = (mapStyleLayer as any).getMaplibreMap()
@@ -208,123 +569,308 @@ export function MapView({ mapType }) {
       setMapColor(!mapColor);
       
   }
-
-  function handleMapTypeSwitch() {
-      setActivePopups([]); // clear active popups state without drawing a new map
-      if (currMapType == "vdm") {
-        setCurrMapType("vlm");
-      } else if (currMapType == "vlm") {
-        setCurrMapType("vdm");        
-      }
-  }
   
   return (
-    <div style={{ width:'100%', height:'95%' }}>
-      <h1 style={{height: '5%'}}>Map View</h1>
-      <label htmlFor="map-color">Make Map Dark Mode</label>
-      <input type="checkbox" id="map-color"
-        onChange={handleColorChange}
-        />
-      <div ref={mapContainerRef} style={{ width: '100%', height: '95%'}} />
-      {activePopups.map(({ id, data, container}) =>
-        createPortal(
-          <VehiclePopupCard id={id} data={data} changeType={handleMapTypeSwitch} popupType={currMapType}/>, container
-        )
-      )}
-    </div>
-  )
-}
-
-/*
-export function MapView({ vehicles, onSelectVehicle, focusedVehicleId }: MapViewProps) {
-  const [zoomTransform, setZoomTransform] = useState({ scale: 1, originX: 50, originY: 50 });
-
-  useEffect(() => {
-    if (!focusedVehicleId) {
-      setZoomTransform({ scale: 1, originX: 50, originY: 50 });
-      return;
-    }
-
-    const index = vehicles.findIndex((vehicle) => vehicle.id === focusedVehicleId);
-    if (index === -1) return;
-
-    const { left, top } = getVehicleMarkerPosition(index);
-    setZoomTransform({ scale: ZOOM_SCALE, originX: left, originY: top });
-  }, [focusedVehicleId, vehicles]);
-
-  const statusColors = {
-    active: 'bg-green-500',
-    idle: 'bg-yellow-500',
-    maintenance: 'bg-red-500',
-    offline: 'bg-gray-400',
-  };
-  // below line 19, figure leaflet library
-  return (
-    <div className="relative bg-gray-100 w-full h-full overflow-hidden">
-      <div className="absolute top-4 left-4 z-10">
-        <h3 className="text-gray-900 text-xl font-semibold">Live Vehicle Map</h3>
-        <p className="text-xs lg:text-sm text-gray-600">Real-time tracking of all vehicles</p>
-      </div>
-
-      <div
-        className="relative bg-gray-100 w-full h-full transition-transform duration-500 ease-out"
+    <div
+      ref={mapModuleRef}
+      className="flex flex-col h-full min-h-0 overflow-hidden"
+      style={{ backgroundColor: MAP_HEADER_BG }}
+    >
+      <header
+        className="map-view-header flex flex-shrink-0 items-center gap-4 px-4 lg:px-6"
         style={{
-          transform: `scale(${zoomTransform.scale})`,
-          transformOrigin: `${zoomTransform.originX}% ${zoomTransform.originY}%`,
+          height: '72px',
+          backgroundColor: MAP_HEADER_BG,
+          borderBottom: `1px solid ${MAP_HEADER_BORDER}`,
         }}
       >
-        <div className="absolute inset-0 opacity-10">
-          <div className="grid grid-cols-8 grid-rows-8 h-full">
-            {Array.from({ length: 64 }).map((_, i) => (
-              <div key={i} className="border border-gray-300"></div>
-            ))}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="min-w-0">
+            <h1
+              className="text-base lg:text-lg truncate"
+              style={{
+                color: '#ffffff',
+                fontWeight: 600,
+                lineHeight: 1.2,
+                margin: 0,
+              }}
+            >
+              {currMapType == "vlm"
+                ? 'Vehicle Line Map'
+                : 'Vehicle Detail Map'}
+            </h1>
+            <p
+              className="text-xs truncate"
+              style={{
+                color: '#C5CEDB',
+                marginTop: '4px',
+                marginBottom: 0,
+                lineHeight: 1.2,
+              }}
+            >
+              {/* list active vehicles here */}
+              {/* 12 vehicles active · Updated just now */}
+            </p>
           </div>
+          
         </div>
-
-        {vehicles.map((vehicle, index) => {
-          const { left, top } = getVehicleMarkerPosition(index);
-          const isFocused = vehicle.id === focusedVehicleId;
-
-          return (
-          <button
-            key={vehicle.id}
-            onClick={() => onSelectVehicle(vehicle)}
-            className="absolute group"
+        <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+          <div
+            ref={searchContainerRef}
             style={{
-              left: `${left}%`,
-              top: `${top}%`,
+              position: 'relative',
+              width: '220px',
+              maxWidth: '100%',
             }}
           >
-            <div className="relative">
-              <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full ${statusColors[vehicle.status]} flex items-center justify-center shadow-lg border-2 border-white transition-transform group-hover:scale-110 ${isFocused ? 'ring-4 ring-blue-500 scale-125' : ''}`}>
-                <MapPin className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
-              </div>
-              
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
-                  <div>{vehicle.name}</div>
-                  <div className="text-gray-400">{vehicle.driver}</div>
-                  <div className="text-gray-400">{vehicle.speed} mph</div>
-                </div>
-                <div className="w-2 h-2 bg-gray-900 absolute left-1/2 -translate-x-1/2 -bottom-1 rotate-45"></div>
-              </div>
-            </div>
-          </button>
-          );
-        })}
+            <label
+              className="flex items-center rounded-full"
+              style={{
+                ...mapHeaderControlStyle,
+                width: '100%',
+                paddingLeft: '12px',
+                paddingRight: '12px',
+                gap: '8px',
+              }}
+            >
+              <Search
+                className="w-4 h-4 flex-shrink-0 block"
+                style={{ color: MAP_HEADER_MUTED_TEXT }}
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                placeholder="Search vehicles"
+                aria-label="Search vehicles"
+                aria-expanded={showSearchResults}
+                aria-controls="map-vehicle-search-results"
+                aria-autocomplete="list"
+                role="combobox"
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setShowSearchResults(true);
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim()) {
+                    setShowSearchResults(true);
+                  }
+                }}
+                onKeyDown={handleSearchKeyDown}
+                className="map-header-search-input w-full focus:outline-none"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: '100%',
+                  padding: 0,
+                  margin: 0,
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: '#ffffff',
+                  lineHeight: 1,
+                  fontSize: '14px',
+                }}
+              />
+            </label>
 
-        <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-2 lg:p-3 space-y-1 lg:space-y-2">
-          <p className="text-xs text-gray-900">Status</p>
-          {Object.entries(statusColors).map(([status, color]) => (
-            <div key={status} className="flex items-center gap-2">
-              <div className={`w-2 h-2 lg:w-3 lg:h-3 rounded-full ${color}`}></div>
-              <span className="text-xs text-gray-700 capitalize">{status}</span>
-            </div>
-          ))}
+            {showSearchResults &&
+              searchQuery.trim().length > 0 && (
+                <ul
+                  id="map-vehicle-search-results"
+                  role="listbox"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 4px)',
+                    left: 0,
+                    right: 0,
+                    margin: 0,
+                    padding: '4px 0',
+                    listStyle: 'none',
+                    backgroundColor: MAP_HEADER_CONTROL_BG,
+                    border: `1px solid ${MAP_HEADER_BORDER}`,
+                    borderRadius: '8px',
+                    zIndex: 1100,
+                    maxHeight: '240px',
+                    overflowY: 'auto',
+                    boxShadow:
+                      '0 8px 24px rgba(0, 0, 0, 0.25)',
+                  }}
+                >
+                  {searchMatches.length > 0 ? (
+                    searchMatches.map(([name, location]) => (
+                      <li key={name} role="presentation">
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={
+                            highlightedVehicle === name
+                          }
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                          }}
+                          onClick={() =>
+                            selectSearchResult(name)
+                          }
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: 'none',
+                            backgroundColor:
+                              highlightedVehicle === name
+                                ? '#4A5364'
+                                : 'transparent',
+                            color: '#FFFFFF',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: 'block',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {name}
+                          </span>
+                          <span
+                            style={{
+                              display: 'block',
+                              marginTop: '2px',
+                              color: MAP_HEADER_MUTED_TEXT,
+                              fontSize: '11px',
+                            }}
+                          >
+                            {location.address}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  ) : (
+                    <li
+                      style={{
+                        padding: '8px 12px',
+                        color: MAP_HEADER_MUTED_TEXT,
+                        fontSize: '13px',
+                      }}
+                    >
+                      No matching vehicles on map
+                    </li>
+                  )}
+                </ul>
+              )}
+          </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={mapColor}
+            aria-label="Toggle between light and dark map style"
+            onClick={() => setMapStyle(!mapColor)}
+            className="rounded-lg transition-colors"
+            style={{
+              ...mapHeaderControlStyle,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '56px',
+              padding: 0,
+            }}
+          >
+            <span
+              style={{
+                position: 'relative',
+                display: 'block',
+                width: '40px',
+                height: '18px',
+                borderRadius: '9999px',
+                border: `1px solid ${MAP_HEADER_BORDER}`,
+                backgroundColor: '#2F3642',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '1px',
+                  left: mapColor ? '25px' : '1px',
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#FFFFFF',
+                  transition: 'left 0.2s ease',
+                }}
+              />
+            </span>
+          </button>
+
+          {isFullscreen ? (
+            <button
+              type="button"
+              aria-label="Exit fullscreen"
+              onClick={toggleFullscreen}
+              className="rounded-lg transition-colors"
+              style={{
+                ...mapHeaderControlStyle,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Minimize2 className="w-4 h-4 block" aria-hidden="true" />
+              Exit fullscreen
+            </button>
+          ) : (
+            <button
+              type="button"
+              aria-label="Enter fullscreen"
+              onClick={toggleFullscreen}
+              className="rounded-lg transition-colors"
+              style={{
+                ...mapHeaderControlStyle,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: `${MAP_HEADER_CONTROL_HEIGHT}px`,
+                padding: 0,
+              }}
+            >
+              <Maximize className="w-4 h-4 block" aria-hidden="true" />
+            </button>
+          )}
         </div>
+      </header>
+
+      <div
+        className={`map-view-map-area relative flex-1 min-h-0 w-full${
+          mapColor ? ' map-zoom-dark-mode' : ''
+        }`}
+      >
+        <div
+          ref={mapContainerRef}
+          className="h-full w-full map-view-container"
+        />
       </div>
+
+      {activePopups.map(
+        ({ id, data, container }) =>
+          createPortal(
+            <VehiclePopupCard
+              key={`${id}-${data}`}
+              id={id}
+              data={data}
+              changeType={
+                handleMapTypeSwitch
+              }
+              popupType={currMapType}
+            />,
+            container,
+          ),
+      )}
     </div>
   );
-
 }
-*/
