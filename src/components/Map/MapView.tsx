@@ -116,10 +116,14 @@ export function MapView({ mapType }) {
   const [highlightedVehicle, setHighlightedVehicle] = useState<string | null>(null);
 
   const lastMarkerFitLocationsRef = useRef<Array<number, number> | null>(null);
-    
+
   // popup layers
   const [activePopups, setActivePopups] = useState([]);
-  
+
+  // timer
+  const [isTimerOn, setIsTimerOn] = useState<boolean>(true);
+  const [timerTick, setTimerTick] = useState<number>(0);
+
   useEffect(() => {
     // only init map if the DOM element exists but the map hasn't been built yet
     if (mapContainerRef.current && !mapInstanceRef.current) {
@@ -220,10 +224,20 @@ export function MapView({ mapType }) {
       );
     }
   }, [highlightedVehicle, recentLocations]);
+  
+  useEffect(() => {
+    if (isTimerOn == true) {
+      const timer = setInterval(() => {
+        setTimerTick(prevTick => prevTick + 1);
+        }, 5000);
+        return () => clearInterval(timer);      
+    }
+  }, [isTimerOn]);
 
   useEffect(() => {
     if (currMapType == "vlm") {
       setRecentLocations(null); // reset state
+
       // fetch polyline data
       async function loadPolyString() {
         const data = await api.getPolyline(selectedTrip);
@@ -234,7 +248,11 @@ export function MapView({ mapType }) {
         setPolyString(data);
       }        
       loadPolyString();
-    } else if (currMapType == "vdm") {
+    }
+  }, [currMapType]);
+  
+  useEffect(() => {
+    if (currMapType == "vdm") {
       // fetch recent location data
       async function loadRecentLocations() {
         setPolyString(""); // reset state
@@ -243,14 +261,9 @@ export function MapView({ mapType }) {
         setRecentLocations(data);
       }
       loadRecentLocations();
-      const timer = setInterval(() => {
-        loadRecentLocations();        
-      }, 5000);
-      return () => clearInterval(timer);
     }
-    
-  }, [currMapType]);
-  
+  }, [currMapType, timerTick]);
+
   // build VLM map layer with polyline
   useEffect(() => {
     if (currMapType == "vlm") {
@@ -319,7 +332,7 @@ export function MapView({ mapType }) {
         vehicleMarkersRef.current.clear();
         return;
       }
-
+      
       if (markersLayerRef.current) {
         map.removeLayer(markersLayerRef.current);
         markersLayerRef.current = null;
@@ -330,16 +343,14 @@ export function MapView({ mapType }) {
       if (!locations || locations.length === 0) {
         return;
       }
-
       const markers: L.Marker[] = [];
       const firstPoint = locations[0][1];
-
       for (const point of locations) {
         const marker = L.marker([
           point[1].lat,
           point[1].lon,
         ]);
-
+      
         vehicleMarkersRef.current.set(
           point[0],
           marker,
@@ -361,13 +372,14 @@ export function MapView({ mapType }) {
               container: popupDiv,
             },
           ]);
-
+          setIsTimerOn(false);
           setSelectedVehicle(point[0]);
           setSelectedTrip(point[1].trip_id);
           setSelectedDate(point[1].timestamp);
         });
 
         marker.on('popupclose', () => {
+          setIsTimerOn(true);
           setActivePopups((prev) =>
             prev.filter(
               (popup) =>
