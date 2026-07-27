@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, MapPin, Fuel, Gauge } from 'lucide-react';
 import { Vehicle } from '../../../App';
 import { mockVehicles } from '../../../data/mockData';
+import { api } from '../../../services/api';
+
 
 type VehicleListProps = {
   onSelectVehicle: (vehicle: Vehicle) => void;
 };
 
 export function VehicleList({ onSelectVehicle }: VehicleListProps) {
+  {/*
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -17,6 +20,17 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
     const matchesStatus = statusFilter === 'all' || vehicle.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+  */}
+  const [vehicleList, setVehicleList] = useState([]);
+
+  useEffect(() => {
+    // fetch user's vehicles
+    async function fetchVehicles() {
+      const vehicles = await api.getUserVehicles();
+      setVehicleList(vehicles);
+    }
+    fetchVehicles();
+  }, []);
 
   const statusColors = {
     active: 'bg-green-100 text-green-700',
@@ -33,6 +47,7 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
       </div>
 
       {/* Filters */}
+      {/*
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
           <div className="flex-1 relative">
@@ -62,25 +77,28 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
           </div>
         </div>
       </div>
+      */}
 
       {/* Vehicle Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-        {filteredVehicles.map((vehicle) => (
+        {vehicleList.map((vehicle) => (
           <div
-            key={vehicle.id}
+            key={vehicle.vehicle_id}
             onClick={() => onSelectVehicle(vehicle)}
             className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6 hover:shadow-lg transition-shadow cursor-pointer"
           >
             <div className="flex items-start justify-between mb-3 lg:mb-4">
               <div>
                 <h3 className="text-gray-900 mb-1 text-sm lg:text-base">{vehicle.name}</h3>
-                <p className="text-xs lg:text-sm text-gray-600">{vehicle.driver}</p>
+                {/* <p className="text-xs lg:text-sm text-gray-600">{vehicle.driver}</p> */}
               </div>
+              {/*
               <span className={`px-2 lg:px-3 py-1 rounded-full text-xs capitalize ${statusColors[vehicle.status]}`}>
                 {vehicle.status}
               </span>
+              */}
             </div>
-
+            {/*
             <div className="space-y-2 lg:space-y-3">
               <div className="flex items-center gap-2 text-xs lg:text-sm text-gray-600">
                 <MapPin className="w-3 h-3 lg:w-4 lg:h-4 flex-shrink-0" />
@@ -102,11 +120,12 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
                 <p className="text-xs text-gray-500">Last update: {vehicle.lastUpdate}</p>
               </div>
             </div>
+            */}
           </div>
         ))}
       </div>
 
-      {filteredVehicles.length === 0 && (
+      {vehicleList.length === 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-8 lg:p-12 text-center">
           <p className="text-sm lg:text-base text-gray-600">No vehicles found matching your criteria</p>
         </div>

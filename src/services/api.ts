@@ -142,14 +142,14 @@ export const api = {
       if (response.status == 200) {
         return response.data
       } else {
-        return "Couldn't fetch user vehicles"
+        return "ERROR"
       }
     } catch (error) {
       console.log(error);
-      return "An error occurred fetching user locations";
+      return "ERROR";
     }
   },
-
+  
   getTripLocations: async(tripId): Promise<Array<[number, number]>> => {
     try {
       const path = "/api/getAllTripLocs/" + tripId;
@@ -164,6 +164,37 @@ export const api = {
       return "An error occurred fetching trip locations";
     }    
   },
+
+  getVehicleTrips: async(vehicleId): Promise<any> => {
+    try {
+      const path = "/api/getAllVehicleTrips/" + vehicleId;
+      const response = await axiosInstance.get(path);
+      if (response.status == 200) {
+        return response.data
+      } else {
+        return "Couldn't fetch vehicle trips"
+      }
+    } catch (error) {
+      console.log(error);
+      return "An error occurred fetching vehicle trips";
+    }      
+  },
+
+  getRecentVehicleLocations: async(vehicleId): Promise<any> => {
+    try {
+      const path = "/api/getRecentVehicle/" + vehicleId;
+      const response = await axiosInstance.get(path);
+      if (response.status == 200) {
+        return response.data
+      } else {
+        return "Couldn't fetch vehicle locations"
+      }
+    } catch (error) {
+      console.log(error);
+      return "An error occurred fetching vehicle locations";
+    }      
+  },
+  
   
   // Sign up function
   signUp: async (username: string, password: string, email: string): Promise<AuthResponse> => {

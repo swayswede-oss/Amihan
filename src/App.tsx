@@ -9,8 +9,9 @@ import { Alerts } from './components/Pages/Alerts/Alerts';
 import { SignUp } from './components/Authentication/SignUp';
 import { Login } from './components/Authentication/Login';
 import { ForgotPassword } from './components/Authentication/ForgotPassword';
-import { MapView } from './components/Map/MapView';
+import { RecentLocationsMap, VehicleHistoryMap } from './components/Map/MapView.tsx';
 import { VehicleHistory } from './components/Pages/VehicleHistory/VehicleHistory';
+import { VehicleTripHistory } from './components/Pages/Vehicles/VehicleTripHistory';
 import { api } from './services/api';
 import { mockVehicles } from './data/mockData';
 
@@ -48,9 +49,10 @@ const defaultUser: UserProfile = {
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authView, setAuthView] = useState<'login' | 'signup' | 'forgot-password'>('login');
-  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'settings'>('dashboard');
+  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'settings' | 'trip-history'>('dashboard');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [focusedVehicleId, setFocusedVehicleId] = useState<string | null>(null);
+  const [selectedTrip, setSelectedTrip] = useState<any | null >(null);
   const [historyFocusedVehicleId, setHistoryFocusedVehicleId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState<UserProfile>(defaultUser);
@@ -108,6 +110,13 @@ export default function App() {
     setCurrentView('vehicle-history');
     setIsSidebarOpen(false);
   };
+
+  const handleTripSelect = (trip) => {
+    console.log(trip);
+    setSelectedVehicle(null);
+    setCurrentView('trip-history');
+    setSelectedTrip(trip);
+  }
 
   const handleSignUp = async (username: string, password: string, email: string) => {
     try {
@@ -176,13 +185,11 @@ export default function App() {
 
         {currentView === 'map' && (
           <div className="flex-1 min-h-0 overflow-hidden">
-            <MapView
-                mapType="vdm"
-            />
+            <RecentLocationsMap />
           </div>
         )}
         {currentView !== 'map' && (
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 flex flex-col overflow-y-auto">
             {currentView === 'dashboard' && (
               <Dashboard
                 onSelectVehicle={setSelectedVehicle}
@@ -197,6 +204,11 @@ export default function App() {
                 focusedVehicleId={historyFocusedVehicleId}
                 onFocusHandled={() => setHistoryFocusedVehicleId(null)}
               />
+            )}
+            {currentView === 'trip-history' && (
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <VehicleTripHistory trip={selectedTrip} />
+              </div>              
             )}
             {currentView === 'analytics' && <Analytics />}
             {currentView === 'alerts' && <Alerts />}
@@ -215,9 +227,11 @@ export default function App() {
           vehicle={selectedVehicle}
           onClose={() => setSelectedVehicle(null)}
           onZoomIn={handleZoomIn}
+          onTripSelect={handleTripSelect}
           onViewHistory={handleViewHistory}
         />
       )}
+      
     </div>
   );
 }
