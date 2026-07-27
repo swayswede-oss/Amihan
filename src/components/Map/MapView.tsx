@@ -311,8 +311,7 @@ export function VehicleHistoryMap({ selectedTrip }) {
                 lineHeight: 1.2,
               }}
             >
-              {/* list active vehicles here */}
-              {/* 12 vehicles active · Updated just now */}
+              {polyString == "INVALID" ? "Could not create accurate trip history line, showing coordinates only": ""}
             </p>
           </div>
 
