@@ -10,7 +10,7 @@ type VehicleDetailsProps = {
   onViewHistory: (vehicle: Vehicle) => void;
 };
 
-function formatDate(dateStr, dateOnly): string {
+export function formatDate(dateStr, dateOnly): string {
   const rawDate = new Date(dateStr);
   if (dateOnly == false) {
     const formatter = new Intl.DateTimeFormat('en-US', {

@@ -112,7 +112,6 @@ export default function App() {
   };
 
   const handleTripSelect = (trip) => {
-    console.log(trip);
     setSelectedVehicle(null);
     setCurrentView('trip-history');
     setSelectedTrip(trip);

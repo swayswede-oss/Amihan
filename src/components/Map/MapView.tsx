@@ -195,15 +195,24 @@ export function VehicleHistoryMap({ selectedTrip }) {
         opacity: 0.75,
         lineJoin: 'round',
         lineCap: 'round'
-      }).addTo(map);        
+      }).addTo(map);
+      return () => {
+        map.removeLayer(fetchedLine);
+        setPolyString("");
+      };
     } else {
       map.setView([firstPoint.lat, firstPoint.lon], 17);
-      fetchedLine = L.marker([firstPoint.lat, firstPoint.lon], 17).addTo(map);
+      const markers = []
+      for (const point of coords) {
+          const currMarker = L.marker([point.lat, point.lon], 17);
+          markers.push(currMarker);
+      }
+      L.featureGroup(markers).addTo(map);
+      return () => {
+        map.removeLayer(markers);
+        setRawCoords(null);
+      };      
     }
-    return () => {
-      map.removeLayer(fetchedLine);
-      setPolyString("");
-    };
   }, [rawCoords, polyString]);
 
   function setMapStyle(useDark: boolean) {
