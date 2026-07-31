@@ -194,6 +194,36 @@ export const api = {
       return "An error occurred fetching vehicle locations";
     }      
   },
+
+  addVehicle: async(newVehicle): Promise<any> => {
+    try {
+      const path = "/api/postVehicle";
+      const response = await axiosInstance.post(path, newVehicle);
+      if (response.status == 201) {
+        return "SUCCESS";
+      } else {
+        return "FAILURE";
+      }
+    } catch (error) {
+      console.error(error);
+      return "ERROR";
+    }
+  },
+
+  deleteVehicle: async(vehicleId): Promise<any> => {
+    try {
+      const path = "/api/deleteVehicle/" + vehicleId;
+      const response = await axiosInstance.delete(path);
+      if (response.status == 200) {
+        return "SUCCESS";
+      } else {
+        return "FAILURE";
+      }
+    } catch (error) {
+      console.error(error);
+      return "ERROR";
+    }    
+  },
   
   
   // Sign up function

@@ -200,7 +200,7 @@ export function VehicleHistoryMap({ selectedTrip }) {
         map.removeLayer(fetchedLine);
         setPolyString("");
       };
-    } else {
+    } else if (coords.length > 0){
       map.setView([firstPoint.lat, firstPoint.lon], 17);
       const markers = []
       for (const point of coords) {

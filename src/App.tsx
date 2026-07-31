@@ -13,7 +13,11 @@ import { RecentLocationsMap, VehicleHistoryMap } from './components/Map/MapView.
 import { VehicleHistory } from './components/Pages/VehicleHistory/VehicleHistory';
 import { VehicleTripHistory } from './components/Pages/Vehicles/VehicleTripHistory';
 import { api } from './services/api';
-import { mockVehicles } from './data/mockData';
+import { Settings } from './components/Pages/Settings/Settings';
+import { AddVehicle } from './components/Pages/Settings/AddVehicle';
+import { RemoveVehicle } from './components/Pages/Settings/RemoveVehicle';
+import { ProfileSettings } from './components/Pages/Settings/ProfileSettings';
+
 
 export type Vehicle = {
   id: string;
@@ -212,11 +216,23 @@ export default function App() {
             {currentView === 'analytics' && <Analytics />}
             {currentView === 'alerts' && <Alerts />}
             {currentView === 'settings' && (
-              <div className="p-4 lg:p-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Settings</h1>
-                <p className="text-gray-600">Application settings and preferences</p>
-              </div>
+              <Settings onNavigate={(view)=>setCurrentView(view)}/>
             )}
+            {currentView === 'add-vehicle' && (
+              <AddVehicle onBack={() => setCurrentView('settings')} currentUser={user.name} />
+            )}
+            {currentView === 'remove-vehicle' && (
+              <RemoveVehicle onBack={() => setCurrentView('settings')} />
+            )}
+            {/*
+            {currentView === 'profile-settings' && (
+              <ProfileSettings
+                user={user}
+                onSave={setUser}
+                onBack={() => setCurrentView('settings')}
+              />
+            )}
+            */}
           </main>
         )}
       </div>
