@@ -2,12 +2,14 @@ import React,{ useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Maximize, Minimize2 } from 'lucide-react';
 import { Vehicle } from '../../App';
+import { VehicleDetailTile } from '../Pages/Vehicles/VehicleDetailTile';
 import 'leaflet/dist/leaflet.css';
 import polyline from '@mapbox/polyline';
 import L from 'leaflet';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-leaflet';
 import { api } from '../../services/api';
+import { formatDate } from '../Pages/Vehicles/VehicleDetails.tsx';
 
 type MapViewProps = {
   mapType: string;
@@ -59,26 +61,39 @@ function elevateLeafletOverlayPanes(map: L.Map) {
 }
 
 function VehiclePopupCard({ id, data, changeType, popupType })  {
-  if (popupType == "vdm") {
-    return (
-      <div style={{ minWidth: '160px'}}>
-        <p>Vehicle Name: {id}</p>
-        <p>Last Seen: {data}</p>
-        <button onClick={() => changeType()} style={{ cursor: 'pointer' }}>View Most Recent Trip</button>
-      </div>
-    )    
-  } else if (popupType == "vlm") {
-      const rawDate = new Date(data[1]);
-      const formattedDate = new Intl.DateTimeFormat('en-US').format(rawDate);
-      return (
-        <div style={{ minWidth: '160px'}}>
-          <p>Vehicle Name: {id}</p>
-          <p>Trip ID: {data[0]}</p>
-          <p>Trip Date: {formattedDate}</p>
-          <button onClick={() => changeType()} style={{ cursor: 'pointer' }}>View Most Recent Locations</button>
-        </div>
-      )     
-  }
+  const rawDate = new Date(data[1]);
+  const formattedDate = new Intl.DateTimeFormat('en-US').format(rawDate);
+  return (
+    <div
+      style={{
+        maxWidth:300,
+        borderRadius: 12,
+        border: 'none !important',
+        color: '#4A5364',
+      }}
+    >
+      <h3><strong>{id}</strong></h3>
+      <hr />
+      <p style={{ marginBottom: 0}}><strong>Trip ID</strong></p>
+      <p style={{ marginTop: 0 }}>{data[0]}</p>
+      <hr />
+      <p style={{ marginBottom: 0}}><strong>Trip Date</strong></p>
+      <p style={{ marginTop: 0 }}>{formattedDate}</p>
+      <button
+        onClick={() => changeType()}
+        style={{
+          cursor: 'pointer',
+          borderRadius: 8,
+          backgroundColor: '#3B82F6',
+          color: '#FFFFFF',
+          padding: '10px 12px',
+          fontWeight: 500,          
+        }}
+      >
+        Back
+      </button>
+    </div>
+  )     
 }
 
 export function VehicleHistoryMap({ selectedTrip }) {
@@ -412,7 +427,7 @@ export function VehicleHistoryMap({ selectedTrip }) {
 }
 
 
-export function RecentLocationsMap() {
+export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
 
   // map container and instance references
   const mapModuleRef = useRef<HTMLDivElement | null>(null);  
@@ -431,7 +446,8 @@ export function RecentLocationsMap() {
   // display data layers
   const [polyString, setPolyString] = useState<string>(""); // VLM polyline
   const [rawCoords, setRawCoords] = useState<Array<[number, number]> | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<string>("") // User selected Vehicle
+  const [selectedVehicle, setSelectedVehicle] = useState<string>("") // User selected Vehicle Name
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("") // User selected Vehicle ID
   const [selectedTrip, setSelectedTrip] = useState<string>("") 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [recentLocations, setRecentLocations] = useState<Array<[number, number]> | null>(null); // VDM coordinate array
@@ -450,6 +466,7 @@ export function RecentLocationsMap() {
 
   // popup layers
   const [activePopups, setActivePopups] = useState([]);
+  const [selectedTile, setSelectedTile] = useState<any | null>(null);
 
   // timer
   const [isTimerOn, setIsTimerOn] = useState<boolean>(true);
@@ -589,7 +606,16 @@ export function RecentLocationsMap() {
         setPolyString(""); // reset state
         setRawCoords(null); // reset state
         const data = await api.getMostRecentLocations();
-        setRecentLocations(data);
+        const formattedLocations = [];
+        for (const vehicle of data) {
+          const locationObj = {
+            vehicleId: vehicle[0],
+            vehicleName: vehicle[1],
+            vehicleLocation: vehicle[2]
+          };
+          formattedLocations.push(locationObj);
+        }
+        setRecentLocations(formattedLocations);
       }
       loadRecentLocations();
     }
@@ -626,7 +652,7 @@ export function RecentLocationsMap() {
       }
       
       const popupDiv = document.createElement('div');
-      fetchedLine.bindPopup(popupDiv, { minWidth: 160} );
+      fetchedLine.bindPopup(popupDiv, { minWidth: 160 } );
       fetchedLine.on('popupopen', () => {
           setActivePopups((prev) => [
             ...prev,
@@ -675,50 +701,26 @@ export function RecentLocationsMap() {
         return;
       }
       const markers: L.Marker[] = [];
-      const firstPoint = locations[0][1];
+      const firstPoint = locations[0].vehicleLocation;
       for (const point of locations) {
         const marker = L.marker([
-          point[1].lat,
-          point[1].lon,
+          point.vehicleLocation.lat,
+          point.vehicleLocation.lon,
         ]);
       
         vehicleMarkersRef.current.set(
-          point[0],
+          point.vehicleName,
           marker,
         );
-
-        const popupDiv =
-          document.createElement('div');
-
-        marker.bindPopup(popupDiv, {
-          minWidth: 160,
-        });
-
-        marker.on('popupopen', () => {
-          setActivePopups((prev) => [
-            ...prev,
-            {
-              id: point[0],
-              data: point[1].address,
-              container: popupDiv,
-            },
-          ]);
+        
+        marker.on('click', () => {
           setIsTimerOn(false);
-          setSelectedVehicle(point[0]);
-          setSelectedTrip(point[1].trip_id);
-          setSelectedDate(point[1].timestamp);
+          setSelectedVehicle(point.vehicleName);
+          setSelectedVehicleId(point.vehicleId);
+          setSelectedTrip(point.vehicleLocation.trip_id);
+          setSelectedDate(point.vehicleLocation.timestamp);
+          setSelectedTile({name: point.vehicleName, address: point.vehicleLocation.address});
         });
-
-        marker.on('popupclose', () => {
-          setIsTimerOn(true);
-          setActivePopups((prev) =>
-            prev.filter(
-              (popup) =>
-                popup.container !== popupDiv,
-            ),
-          );
-        });
-
         markers.push(marker);
       }
 
@@ -760,11 +762,12 @@ export function RecentLocationsMap() {
     if (!query || !recentLocations) {
       return [];
     }
-
-    return recentLocations.filter(([name]) =>
-      name.toLowerCase().includes(query),
+    const matched = recentLocations.filter((location) =>
+      location.vehicleName.toLowerCase().includes(query),
     );
+    return matched;
   }
+
 
   function clearMarkerHighlight() {
     vehicleMarkersRef.current.forEach((marker) => {
@@ -780,7 +783,7 @@ export function RecentLocationsMap() {
       vehicleName,
     );
     const locationEntry = recentLocations.find(
-      ([name]) => name === vehicleName,
+      (location) => location.vehicleName === vehicleName,
     );
 
     if (
@@ -792,7 +795,8 @@ export function RecentLocationsMap() {
       return;
     }
 
-    const { lat, lon } = locationEntry[1];
+    const lat = locationEntry.vehicleLocation.lat;
+    const lon = locationEntry.vehicleLocation.lon;
 
     clearMarkerHighlight();
     setHighlightedVehicle(vehicleName);
@@ -812,26 +816,7 @@ export function RecentLocationsMap() {
     setShowSearchResults(false);
     focusVehicle(vehicleName);
   }
-
-  function handleSearchKeyDown(
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) {
-    if (event.key !== 'Enter') {
-      return;
-    }
-
-    event.preventDefault();
-
-    const query = searchQuery.trim().toLowerCase();
-    const exactMatch = recentLocations.find(
-      ([name]) => name.toLowerCase() === query,
-    );
-
-    if (exactMatch) {
-      selectSearchResult(exactMatch[0]);
-    }
-  }
-
+  
   const searchMatches = getSearchMatches();
 
   function setMapStyle(useDark: boolean) {
@@ -904,7 +889,25 @@ export function RecentLocationsMap() {
       setCurrMapType('vdm');
     }
   }
-  
+
+  function closeVehicleTile() {
+    setSelectedTile(null);
+    setIsTimerOn(true);
+    clearMarkerHighlight();
+    setHighlightedVehicle(null);
+  }
+
+  function handleMapTypeSwitch() {
+    setActivePopups([]);
+    setSelectedTile(null);
+    setIsTimerOn(true);
+
+    if (currMapType == 'vdm') {
+      setCurrMapType('vlm');
+    } else if (currMapType == 'vlm') {
+      setCurrMapType('vdm');
+    }
+  }  
   return (
     <div
       ref={mapModuleRef}
@@ -991,7 +994,7 @@ export function RecentLocationsMap() {
                     setShowSearchResults(true);
                   }
                 }}
-                onKeyDown={handleSearchKeyDown}
+                onKeyDown={() => {}}
                 className="map-header-search-input w-full focus:outline-none"
                 style={{
                   flex: 1,
@@ -1032,19 +1035,19 @@ export function RecentLocationsMap() {
                   }}
                 >
                   {searchMatches.length > 0 ? (
-                    searchMatches.map(([name, location]) => (
-                      <li key={name} role="presentation">
+                    searchMatches.map((location) => (
+                      <li key={location.vehicleName} role="presentation">
                         <button
                           type="button"
                           role="option"
                           aria-selected={
-                            highlightedVehicle === name
+                            highlightedVehicle === location.vehicleName
                           }
                           onMouseDown={(event) => {
                             event.preventDefault();
                           }}
                           onClick={() =>
-                            selectSearchResult(name)
+                            selectSearchResult(location.vehicleName)
                           }
                           style={{
                             display: 'block',
@@ -1052,7 +1055,7 @@ export function RecentLocationsMap() {
                             padding: '8px 12px',
                             border: 'none',
                             backgroundColor:
-                              highlightedVehicle === name
+                              highlightedVehicle === location.vehicleName
                                 ? '#4A5364'
                                 : 'transparent',
                             color: '#FFFFFF',
@@ -1068,7 +1071,7 @@ export function RecentLocationsMap() {
                               fontWeight: 500,
                             }}
                           >
-                            {name}
+                            {location.vehicleName}
                           </span>
                           <span
                             style={{
@@ -1078,7 +1081,7 @@ export function RecentLocationsMap() {
                               fontSize: '11px',
                             }}
                           >
-                            {location.address}
+                            {location.vehicleLocation.address}
                           </span>
                         </button>
                       </li>
@@ -1190,6 +1193,34 @@ export function RecentLocationsMap() {
           className="h-full w-full map-view-container"
         />
       </div>
+
+      {currMapType === 'vdm' && selectedTile && (
+        <VehicleDetailTile
+          key={`${selectedTile.name}-${selectedTile.address ?? ''}`}
+          vehicle={
+            {
+              id: selectedVehicleId,
+              name: selectedTile.name,
+              address: selectedTile.address,
+              location: { lat: recentLocations[0].vehicleLocation.lat, lng: recentLocations[0].vehicleLocation.lon },
+              lastUpdate: formatDate(selectedDate, false)
+            }
+          }
+          addressFallback={selectedTile.address}
+          usePortal={false}
+          onViewTrip={onViewTripHistory}
+          onRecentTrip={handleMapTypeSwitch}
+          onClose={closeVehicleTile}
+          onViewHistory={
+            onViewHistory
+              ? (vehicle) => {
+                  closeVehicleTile();
+                  onViewHistory(vehicle);
+                }
+              : undefined
+          }
+        />
+      )}
 
       {activePopups.map(
         ({ id, data, container }) =>

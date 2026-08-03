@@ -3,7 +3,7 @@ import { Search, Filter, MapPin, Fuel, Gauge } from 'lucide-react';
 import { Vehicle } from '../../../App';
 import { mockVehicles } from '../../../data/mockData';
 import { api } from '../../../services/api';
-
+import { formatDate } from './VehicleDetails.tsx';
 
 type VehicleListProps = {
   onSelectVehicle: (vehicle: Vehicle) => void;
@@ -22,7 +22,7 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
   });
   */}
   const [vehicleList, setVehicleList] = useState([]);
-
+  // const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   useEffect(() => {
     // fetch user's vehicles
     async function fetchVehicles() {
@@ -31,7 +31,52 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
     }
     fetchVehicles();
   }, []);
+  
+  const getVehicle = async (vehicle) => {
+    const fetchedLocs = await api.getRecentVehicleLocations(vehicle.vehicle_id);
+      if (fetchedLocs.length > 0) {
+        const mostRecentLoc = fetchedLocs[0];
+        const vehicleObj = {
+          id: vehicle.vehicle_id,
+          name: vehicle.name,
+          address: mostRecentLoc.address,
+          location: { lat: mostRecentLoc.lat, lng: mostRecentLoc.lon },
+          lastUpdate: formatDate(mostRecentLoc.timestamp, false)
+        };
+        onSelectVehicle(vehicleObj);
+      }
+  }
 
+  /*
+  useEffect(() => {
+    if (selectedVehicle) {
+
+      async function fetchRecentLocations() {
+        const fetchedLocs = await api.getRecentVehicleLocations(selectedVehicle.vehicle_id);
+        if (fetchedLocs.length > 0) {
+          const mostRecentLoc = fetchedLocs[0];
+          // set location
+          setRecentAddress(mostRecentLoc.address);
+          setRecentCoords([mostRecentLoc.lat, mostRecentLoc.lon]);
+
+          // set last update
+          setLastUpdate(formatDate(mostRecentLoc.timestamp, false));
+
+          const vehicleObj = {
+            id: selectedVehicle.vehicle_id,
+            name: selectedVehicle.name,
+            address: mostRecentLoc.address,
+            location: { lat: mostRecentLoc.lat, lng: mostRecentLoc.lon },
+            lastUpdate: formatDate(mostRecentLoc.timestamp, false)
+          };
+          console.log(vehicleObj);
+          onSelectVehicle(vehicleObj);
+        }
+      }      
+    }
+            
+  }, [selectedVehicle]);
+  */
   const statusColors = {
     active: 'bg-green-100 text-green-700',
     idle: 'bg-yellow-100 text-yellow-700',
@@ -84,7 +129,7 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
         {vehicleList.map((vehicle) => (
           <div
             key={vehicle.vehicle_id}
-            onClick={() => onSelectVehicle(vehicle)}
+            onClick={(e) => getVehicle(vehicle)}
             className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6 hover:shadow-lg transition-shadow cursor-pointer"
           >
             <div className="flex items-start justify-between mb-3 lg:mb-4">

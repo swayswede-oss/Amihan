@@ -195,6 +195,21 @@ export const api = {
     }      
   },
 
+  getTrip: async(tripId): Promise<any> => {
+    try {
+      const path = "/api/getTrip/" + tripId;
+      const response = await axiosInstance.get(path);
+      if (response.status == 200) {
+        return response.data;
+      } else {
+        return "Couldn't fetch trip";
+      }
+    } catch (error) {
+      console.log(error);
+      return "An error occurred fetching trip";
+    }    
+  },
+
   addVehicle: async(newVehicle): Promise<any> => {
     try {
       const path = "/api/postVehicle";

@@ -3,6 +3,11 @@ import { VehicleHistoryMap } from '../../Map/MapView.tsx';
 import { formatDate } from './VehicleDetails.tsx';
 import { api } from '../../../services/api';
 
+export async function getMostRecentTrip(vehicle): Promise<any> {
+  
+}
+
+
 export function VehicleTripHistory({ trip }) {
   const [locations, setLocations] = useState([]);
 

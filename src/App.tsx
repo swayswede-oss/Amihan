@@ -3,15 +3,16 @@ import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
 import { Dashboard } from './components/Pages/Dashboard/Dashboard';
 import { VehicleList } from './components/Pages/Vehicles/VehicleList';
-import { VehicleDetails } from './components/Pages/Vehicles/VehicleDetails';
+// import { VehicleDetails } from './components/Pages/Vehicles/VehicleDetails';
 import { Analytics } from './components/Pages/Analytics/Analytics';
 import { Alerts } from './components/Pages/Alerts/Alerts';
 import { SignUp } from './components/Authentication/SignUp';
 import { Login } from './components/Authentication/Login';
 import { ForgotPassword } from './components/Authentication/ForgotPassword';
-import { RecentLocationsMap, VehicleHistoryMap } from './components/Map/MapView.tsx';
+import { RecentLocationsMap, /*VehicleHistoryMap*/ } from './components/Map/MapView.tsx';
 import { VehicleHistory } from './components/Pages/VehicleHistory/VehicleHistory';
 import { VehicleTripHistory } from './components/Pages/Vehicles/VehicleTripHistory';
+import { VehicleDetailTile} from './components/Pages/Vehicles/VehicleDetailTile.tsx';
 import { api } from './services/api';
 import { Settings } from './components/Pages/Settings/Settings';
 import { AddVehicle } from './components/Pages/Settings/AddVehicle';
@@ -106,6 +107,7 @@ export default function App() {
     setCurrentView('vehicle-history');
     setSelectedVehicle(null);
     setIsSidebarOpen(false);
+    console.log(vehicle);
   };
 
   const handleViewAllActivity = () => {
@@ -119,8 +121,18 @@ export default function App() {
     setSelectedVehicle(null);
     setCurrentView('trip-history');
     setSelectedTrip(trip);
+    console.log(trip);
   }
 
+  /*
+  const handleMostRecentTrip = async () => {
+    const recentLocs = await api.getRecentVehicleLocations(selectedVehicle.id);
+    const recentId = recentLocs[0].trip_id;
+    const allTrips = await api.getVehicleTrips(selectedVehicle.id);
+    // const mostRecentTrip = await api.getTrip(recentId);
+    console.log(allTrips);
+  }
+  */
   const handleSignUp = async (username: string, password: string, email: string) => {
     try {
       // Call your backend API
@@ -176,6 +188,7 @@ export default function App() {
             window.history.replaceState(null, '', '/');
           }
           setIsSidebarOpen(false);
+          setSelectedVehicle(null);
         }}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -188,7 +201,7 @@ export default function App() {
 
         {currentView === 'map' && (
           <div className="flex-1 min-h-0 overflow-hidden">
-            <RecentLocationsMap />
+            <RecentLocationsMap onViewTripHistory={handleTripSelect}/>
           </div>
         )}
         {currentView !== 'map' && (
@@ -236,14 +249,18 @@ export default function App() {
           </main>
         )}
       </div>
-
       {selectedVehicle && (
-        <VehicleDetails
+        <VehicleDetailTile
           vehicle={selectedVehicle}
           onClose={() => setSelectedVehicle(null)}
-          onZoomIn={handleZoomIn}
-          onTripSelect={handleTripSelect}
+          onViewTrip ={handleTripSelect}
           onViewHistory={handleViewHistory}
+          onRecentTrip={async () => {
+            const allTrips = await api.getVehicleTrips(selectedVehicle.id);
+            const sorted = allTrips.sort((a,b) => a.idx - b.idx);
+            const mostRecentTrip = sorted[sorted.length-1];
+            handleTripSelect(mostRecentTrip);
+          }}
         />
       )}
       

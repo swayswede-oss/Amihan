@@ -2,25 +2,26 @@
 
 :root {
   --font-size: 16px;
-  --background: #ffffff;
+  /* Bluish-gray surfaces — canvas darker, tiles slightly lighter (screenshot match) */
+  --background: #c5ced9;
   --foreground: oklch(0.145 0 0);
-  --card: #ffffff;
+  --card: #e1e5ee;
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+  --popover: #e1e5ee;
   --popover-foreground: oklch(0.145 0 0);
   --primary: #030213;
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.95 0.0058 264.53);
   --secondary-foreground: #030213;
-  --muted: #ececf0;
+  --muted: #d0d7e2;
   --muted-foreground: #717182;
-  --accent: #e9ebef;
+  --accent: #c5ced9;
   --accent-foreground: #030213;
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
+  --border: rgba(0, 0, 0, 0.12);
   --input: transparent;
-  --input-background: #f3f3f5;
+  --input-background: #b8c3d1;
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
@@ -131,6 +132,59 @@
   }
 }
 
+/*
+ * Unlayered surface overrides (hardcoded, !important).
+ * Tiles stay the screenshot light blue-gray; canvas stays darker.
+ */
+body {
+  background-color: #c5ced9;
+  color: var(--foreground);
+}
+
+.bg-white,
+.bg-card {
+  background-color: #e1e5ee !important;
+}
+
+.bg-background {
+  background-color: #c5ced9 !important;
+}
+
+.bg-muted,
+.bg-gray-200 {
+  background-color: #d0d7e2 !important;
+}
+
+.bg-gray-50,
+.bg-gray-100,
+.hover\:bg-gray-50:hover,
+.hover\:bg-gray-100:hover {
+  background-color: #d0d7e2 !important;
+}
+
+.bg-gray-700 {
+  background-color: #4b5563 !important;
+}
+
+.bg-gray-300 {
+  background-color: #D3D9E3 !important;
+}
+
+.text-left {
+  text-align: left !important;
+}
+
+/* Subtle muted outline for tiles and text fields */
+.border-gray-200,
+.border-gray-300,
+.border-gray-700 {
+  border-color: #a4acb8 !important;
+}
+
+.alert-info-bg {
+  background-color: #dce6f0 !important;
+}
+
 /**
  * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
  */
@@ -188,6 +242,10 @@
   background-repeat: no-repeat !important;
 }
 
+.login-card {
+  background-color: #cfdbe9 !important;
+}
+
 .login-logo-image {
   display: block;
   width: min(240px, 78%);
@@ -195,6 +253,108 @@
   object-fit: contain;
 }
 
+/*
+ * Leaflet zoom controls default to a light scheme. Scope dark styles to the
+ * map-area class toggled with dark map style only — leave light mode alone.
+ * Outline/border stays on Leaflet defaults (#ccc divider, touch rgba border).
+ */
+.map-zoom-dark-mode .leaflet-control-zoom a {
+  background-color: #3f4756;
+  border-bottom-color: #2f3642;
+  color: #d1d5db;
+}
+
+.map-zoom-dark-mode .leaflet-control-zoom a:hover,
+.map-zoom-dark-mode .leaflet-control-zoom a:focus {
+  background-color: #4a5364;
+  color: #e5e7eb;
+}
+
+.map-zoom-dark-mode .leaflet-control-zoom a.leaflet-disabled,
+.map-zoom-dark-mode .leaflet-control-zoom a.leaflet-disabled:hover,
+.map-zoom-dark-mode .leaflet-control-zoom a.leaflet-disabled:focus {
+  background-color: #343b48;
+  color: #9ca3af;
+  cursor: default;
+}
+
+/* Centered vehicle detail tile (VDM pin click) */
+.vehicle-detail-tile {
+  box-sizing: border-box;
+}
+
+.vehicle-detail-tile button {
+  appearance: none;
+  cursor: pointer;
+}
+
 html {
   font-size: var(--font-size);
+}
+
+/* Sidebar / profile menu surfaces — single darker blue-gray */
+.menu-surface,
+.menu-surface-hover:hover,
+.menu-surface-active,
+.menu-surface-dragging {
+  background-color: #8fa6c0 !important;
+}
+
+.menu-surface:hover {
+  background-color: #a3b8cf !important;
+}
+
+.profile-menu-popover {
+  background-color: #c5ced9 !important;
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+.profile-menu-avatar {
+  background-color: #d0d7e2 !important;
+  border-radius: 50% !important;
+  overflow: hidden;
+}
+
+.profile-menu-muted {
+  color: #6b7280 !important;
+}
+
+.profile-settings-btn {
+  background-color: #c5ced9 !important;
+  color: #374151 !important;
+  padding: 0.75rem 1.25rem !important;
+  font-weight: 500 !important;
+}
+
+.profile-settings-btn:hover {
+  background-color: #b5bfcc !important;
+}
+
+.back-to-settings-btn {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  padding: 0.5rem 0.875rem !important;
+  margin-left: -0.875rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #374151;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.back-to-settings-btn:hover {
+  /* Hover color applied via inline style so it tracks header #4a5568 reliably */
+  color: #111827 !important;
+}
+
+.settings-menu-item {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
 }
