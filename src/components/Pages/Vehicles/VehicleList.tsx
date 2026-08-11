@@ -22,66 +22,45 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
   });
   */}
   const [vehicleList, setVehicleList] = useState([]);
-  // const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
+
   useEffect(() => {
     // fetch user's vehicles
     async function fetchVehicles() {
-      const vehicles = await api.getUserVehicles();
+      const fetched = await api.getUserVehicles();
+      const vehicles = [];
+      for (const v of fetched) {
+        const fetchedLocs = await api.getRecentVehicleLocations(v.vehicle_id);
+        const vehicleObj = {
+            id: v.vehicle_id,
+            name: v.name,
+            address: "",
+            location: { lat: 0, lng: 0 },
+            status: v.status,
+            lastUpdate: ""
+        };
+        if (fetchedLocs.length > 0) {
+          const mostRecentLoc = fetchedLocs[0];
+          vehicleObj.address = mostRecentLoc.address;
+          vehicleObj.location = { lat: mostRecentLoc.lat, lng: mostRecentLoc.lon };
+          vehicleObj.lastUpdate = formatDate(mostRecentLoc.timestamp, false);
+        }
+        vehicles.push(vehicleObj);
+      }
       setVehicleList(vehicles);
     }
     fetchVehicles();
   }, []);
-  
-  const getVehicle = async (vehicle) => {
-    const fetchedLocs = await api.getRecentVehicleLocations(vehicle.vehicle_id);
-      if (fetchedLocs.length > 0) {
-        const mostRecentLoc = fetchedLocs[0];
-        const vehicleObj = {
-          id: vehicle.vehicle_id,
-          name: vehicle.name,
-          address: mostRecentLoc.address,
-          location: { lat: mostRecentLoc.lat, lng: mostRecentLoc.lon },
-          lastUpdate: formatDate(mostRecentLoc.timestamp, false)
-        };
-        onSelectVehicle(vehicleObj);
-      }
+
+  const statusText = {
+    1: "active",
+    0: "off"
   }
-
-  /*
-  useEffect(() => {
-    if (selectedVehicle) {
-
-      async function fetchRecentLocations() {
-        const fetchedLocs = await api.getRecentVehicleLocations(selectedVehicle.vehicle_id);
-        if (fetchedLocs.length > 0) {
-          const mostRecentLoc = fetchedLocs[0];
-          // set location
-          setRecentAddress(mostRecentLoc.address);
-          setRecentCoords([mostRecentLoc.lat, mostRecentLoc.lon]);
-
-          // set last update
-          setLastUpdate(formatDate(mostRecentLoc.timestamp, false));
-
-          const vehicleObj = {
-            id: selectedVehicle.vehicle_id,
-            name: selectedVehicle.name,
-            address: mostRecentLoc.address,
-            location: { lat: mostRecentLoc.lat, lng: mostRecentLoc.lon },
-            lastUpdate: formatDate(mostRecentLoc.timestamp, false)
-          };
-          console.log(vehicleObj);
-          onSelectVehicle(vehicleObj);
-        }
-      }      
-    }
-            
-  }, [selectedVehicle]);
-  */
+    
   const statusColors = {
-    active: 'bg-green-100 text-green-700',
-    idle: 'bg-yellow-100 text-yellow-700',
-    maintenance: 'bg-red-100 text-red-700',
-    offline: 'bg-gray-100 text-gray-700',
+    1: 'bg-green-100 text-green-700',
+    // idle: 'bg-yellow-100 text-yellow-700',
+    // maintenance: 'bg-red-100 text-red-700',
+    0: 'bg-gray-100 text-gray-700',
   };
 
   return (
@@ -129,7 +108,7 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
         {vehicleList.map((vehicle) => (
           <div
             key={vehicle.vehicle_id}
-            onClick={(e) => getVehicle(vehicle)}
+            onClick={(e) => onSelectVehicle(vehicle)}
             className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6 hover:shadow-lg transition-shadow cursor-pointer"
           >
             <div className="flex items-start justify-between mb-3 lg:mb-4">
@@ -137,19 +116,17 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
                 <h3 className="text-gray-900 mb-1 text-sm lg:text-base">{vehicle.name}</h3>
                 {/* <p className="text-xs lg:text-sm text-gray-600">{vehicle.driver}</p> */}
               </div>
-              {/*
               <span className={`px-2 lg:px-3 py-1 rounded-full text-xs capitalize ${statusColors[vehicle.status]}`}>
-                {vehicle.status}
+                {statusText[vehicle.status]}
               </span>
-              */}
             </div>
-            {/*
+            
             <div className="space-y-2 lg:space-y-3">
               <div className="flex items-center gap-2 text-xs lg:text-sm text-gray-600">
                 <MapPin className="w-3 h-3 lg:w-4 lg:h-4 flex-shrink-0" />
-                <span className="truncate">{vehicle.location.address}</span>
+                <span className="truncate">{vehicle.address}</span>
               </div>
-
+              {/*
               <div className="grid grid-cols-2 gap-3 lg:gap-4">
                 <div className="flex items-center gap-2 text-xs lg:text-sm text-gray-600">
                   <Gauge className="w-3 h-3 lg:w-4 lg:h-4" />
@@ -160,12 +137,12 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
                   <span>{vehicle.fuel}%</span>
                 </div>
               </div>
-
+              */}
               <div className="pt-2 lg:pt-3 border-t border-gray-200">
                 <p className="text-xs text-gray-500">Last update: {vehicle.lastUpdate}</p>
               </div>
             </div>
-            */}
+
           </div>
         ))}
       </div>

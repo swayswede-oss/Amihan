@@ -32,18 +32,22 @@ const TILE_BG = '#4A5364';
 const TILE_CONTROL_BG = '#3F4756';
 const TILE_BORDER = '#454E5E';
 
-function getPresenceLabel(status: Vehicle['status']): string {
+function getPresenceLabel(status) {
   switch (status) {
-    case 'active':
+    case 1:
       return 'Online now';
+    /*
     case 'idle':
       return 'Idle';
-    case 'offline':
+    */
+    case 0:
       return 'Offline';
+    /*
     case 'maintenance':
       return 'In maintenance';
     default:
       return 'Online now';
+    */
   }
 }
 
@@ -60,13 +64,12 @@ export function VehicleDetailTile({
   const lastSeen = vehicle.address || addressFallback || '';
   const [selectedTripHistory, setSelectedTripHistory] = useState<any | null>(null);
 
-  /*
   const presenceText = `${getPresenceLabel(vehicle.status)} · Updated ${vehicle.lastUpdate}`;
   const statusLabel =
-    vehicle.status.charAt(0).toUpperCase() + vehicle.status.slice(1);
+    vehicle.status;
   
   const statusAccent =
-    vehicle.status === 'active'
+    vehicle.status == 1
       ? '#4ade80'
       : vehicle.status === 'idle'
         ? '#facc15'
@@ -75,14 +78,14 @@ export function VehicleDetailTile({
           : '#94a3b8';
 
   const statusPillBg =
-    vehicle.status === 'active'
+    vehicle.status == 1 
       ? 'rgba(74, 222, 128, 0.2)'
       : vehicle.status === 'idle'
         ? 'rgba(250, 204, 21, 0.2)'
         : vehicle.status === 'maintenance'
           ? 'rgba(248, 113, 113, 0.2)'
           : 'rgba(148, 163, 184, 0.2)';
-  */
+
   const rowStyle: CSSProperties = {
     display: 'flex',
     gap: '10px',
@@ -142,7 +145,6 @@ export function VehicleDetailTile({
         setRecentTrips(fetchedTrips);
       }
     }
-    // fetchRecentLocations();
     fetchTrips();
   }, []);  
 
@@ -239,7 +241,6 @@ export function VehicleDetailTile({
               >
                 {vehicle.name}
               </h3>
-              {/*
               <span
                 style={{
                   display: 'inline-flex',
@@ -251,8 +252,8 @@ export function VehicleDetailTile({
                   fontSize: 12,
                   fontWeight: 500,
                   lineHeight: '16px',
-                  // backgroundColor: statusPillBg,
-                  // color: statusAccent,
+                  backgroundColor: statusPillBg,
+                  color: statusAccent,
                 }}
               >
                 <span
@@ -265,9 +266,8 @@ export function VehicleDetailTile({
                   }}
                   aria-hidden="true"
                 />
-                {statusLabel}
+                {getPresenceLabel(vehicle.status)}
               </span>
-              */}
             </div>
 
             <div

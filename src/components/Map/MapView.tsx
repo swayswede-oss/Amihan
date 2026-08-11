@@ -448,6 +448,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
   const [rawCoords, setRawCoords] = useState<Array<[number, number]> | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<string>("") // User selected Vehicle Name
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("") // User selected Vehicle ID
+  const [selectedVehicleStatus, setSelectedVehicleStatus] = useState<number>(0);
   const [selectedTrip, setSelectedTrip] = useState<string>("") 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [recentLocations, setRecentLocations] = useState<Array<[number, number]> | null>(null); // VDM coordinate array
@@ -611,7 +612,8 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
           const locationObj = {
             vehicleId: vehicle[0],
             vehicleName: vehicle[1],
-            vehicleLocation: vehicle[2]
+            vehicleStatus: vehicle[2],
+            vehicleLocation: vehicle[3]
           };
           formattedLocations.push(locationObj);
         }
@@ -719,6 +721,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
           setSelectedVehicleId(point.vehicleId);
           setSelectedTrip(point.vehicleLocation.trip_id);
           setSelectedDate(point.vehicleLocation.timestamp);
+          setSelectedVehicleStatus(point.vehicleStatus);
           setSelectedTile({name: point.vehicleName, address: point.vehicleLocation.address});
         });
         markers.push(marker);
@@ -1203,6 +1206,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
               name: selectedTile.name,
               address: selectedTile.address,
               location: { lat: recentLocations[0].vehicleLocation.lat, lng: recentLocations[0].vehicleLocation.lon },
+              status: selectedVehicleStatus,
               lastUpdate: formatDate(selectedDate, false)
             }
           }
