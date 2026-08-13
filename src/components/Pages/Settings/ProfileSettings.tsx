@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import { ArrowLeft, CheckCircle2, Save } from 'lucide-react';
 import type { UserProfile } from '../../../App';
-
+import { api } from '../../../services/api.ts';
 type FormErrors = {
   name?: string;
   position?: string;
@@ -25,20 +25,41 @@ function getInitials(name: string) {
 }
 
 export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) {
-  const [name, setName] = useState(user.name);
-  const [position, setPosition] = useState(user.position);
-  const [email, setEmail] = useState(user.email);
-  const [phone, setPhone] = useState(user.phone);
+  const [displayName, setDisplayName] = useState("");
+  const [name, setName] = useState("");
+  // const [position, setPosition] = useState(user.position);
+  const [email, setEmail] = useState("");
+  // const [phone, setPhone] = useState(user.phone);
+  const [memberSince, setMemberSince] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isBackHovered, setIsBackHovered] = useState(false);
   const [isSubmitHovered, setIsSubmitHovered] = useState(false);
 
+  useEffect(() => {
+    async function fetchUserDetails() {
+      const fetchedDetails = await api.getUser();
+      setName(fetchedDetails.username);
+      setDisplayName(fetchedDetails.username);
+      setEmail(fetchedDetails.email);
+      const memberDate = new Date(fetchedDetails.created_at + "T00:00:00").toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+           
+      setMemberSince(memberDate);
+    }
+    fetchUserDetails();
+  }, []);
+
+  /*
   const memberSince = new Date(user.createdAt).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   });
+  */
 
   const validate = (): boolean => {
     const nextErrors: FormErrors = {};
@@ -47,36 +68,43 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
       nextErrors.name = 'Name is required';
     }
 
+    /*
     if (!position.trim()) {
       nextErrors.position = 'Position is required';
     }
-
+    */
     if (!email.trim()) {
       nextErrors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       nextErrors.email = 'Enter a valid email address';
     }
 
+    /*
     if (!phone.trim()) {
       nextErrors.phone = 'Phone number is required';
     }
-
+    */
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setSuccessMessage(null);
 
+    const new_details = {
+      new_username: name.trim(),
+      new_email: email.trim()
+    };
+    const updateResponse = await api.updateUser(new_details);
+    setDisplayName(new_details.new_username);
     if (!validate()) return;
-
     onSave({
       ...user,
       name: name.trim(),
-      position: position.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
+      // position: position.trim(),
+      // email: email.trim(),
+      // phone: phone.trim(),
     });
 
     setSuccessMessage('Profile updated successfully.');
@@ -114,7 +142,7 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">
-              {name.trim() || user.name}
+              {displayName}
             </p>
             <p className="profile-menu-muted text-xs">Member since {memberSince}</p>
           </div>
@@ -130,7 +158,7 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="profile-name" className="mb-1.5 block text-sm text-gray-700">
-              Full name
+              Username
             </label>
             <input
               id="profile-name"
@@ -145,7 +173,7 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
             />
             {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
           </div>
-
+          {/*
           <div>
             <label htmlFor="profile-position" className="mb-1.5 block text-sm text-gray-700">
               Position
@@ -165,7 +193,7 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
               <p className="mt-1 text-xs text-red-600">{errors.position}</p>
             )}
           </div>
-
+          */}
           <div>
             <label htmlFor="profile-email" className="mb-1.5 block text-sm text-gray-700">
               Email
@@ -183,7 +211,7 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
             />
             {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
           </div>
-
+          {/*
           <div>
             <label htmlFor="profile-phone" className="mb-1.5 block text-sm text-gray-700">
               Phone
@@ -201,7 +229,7 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
             />
             {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
           </div>
-
+          */}
           <button
             type="submit"
             className="flex items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors"

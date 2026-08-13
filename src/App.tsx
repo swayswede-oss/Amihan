@@ -237,7 +237,6 @@ export default function App() {
             {currentView === 'remove-vehicle' && (
               <RemoveVehicle onBack={() => setCurrentView('settings')} />
             )}
-            {/*
             {currentView === 'profile-settings' && (
               <ProfileSettings
                 user={user}
@@ -245,7 +244,6 @@ export default function App() {
                 onBack={() => setCurrentView('settings')}
               />
             )}
-            */}
           </main>
         )}
       </div>

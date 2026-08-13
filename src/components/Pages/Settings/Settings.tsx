@@ -50,7 +50,6 @@ export function Settings({ onNavigate }: SettingsProps) {
             <ChevronRight className="w-5 h-5 shrink-0 text-gray-400" />
           </button>
         </nav>
-        {/*
         <nav className="bg-card rounded-lg overflow-hidden">
           <button
             type="button"
@@ -69,7 +68,6 @@ export function Settings({ onNavigate }: SettingsProps) {
             <ChevronRight className="w-5 h-5 shrink-0 text-gray-400" />
           </button>
         </nav>
-        */}
       </div>
     </div>
   );

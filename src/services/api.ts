@@ -61,14 +61,16 @@ export const api = {
         "idx": 0,
         "username": username,
         "password_hash": password,
-        "email": ""
+        "email": "",
+        "created_at": "2026-08-01" // placeholder that gets filled in by the backend
       };
       try {
         const response = await axiosInstance.post('/login', payload);
         // Store token in localStorage if retrieval was successful
           if (response.status == 200) {
-            localStorage.setItem('authToken', response.data);
             const claims = jwtDecode(response.data);
+            localStorage.setItem('authToken', response.data);
+            localStorage.setItem('username', claims['username']);
             const loggedIn: AuthResponse =  {
                 success: true,
                 token: response.data,
@@ -118,7 +120,7 @@ export const api = {
   
   getMostRecentLocations: async(): Promise<Array<[number, number]>> => {
     const token = jwtDecode(localStorage.getItem("authToken"));
-    const currUser = token["username"];
+    const currUser = localStorage.getItem("username");
     try {
       const path = "/api/getRecentUser/" + currUser;
       const response = await axiosInstance.get(path);
@@ -135,11 +137,12 @@ export const api = {
 
   getUserVehicles: async(): Promise<any> => {
     const token = jwtDecode(localStorage.getItem("authToken"));
-    const currUser = token["username"];
+    const currUser = localStorage.getItem("username");
     try {
       const path = "/api/getUserVehicles/" + currUser;
       const response = await axiosInstance.get(path);
       if (response.status == 200) {
+        console.log(currUser)
         return response.data
       } else {
         return "ERROR"
@@ -239,7 +242,41 @@ export const api = {
       return "ERROR";
     }    
   },
-  
+
+  getUser: async(): Promise<any> => {
+    const token = jwtDecode(localStorage.getItem("authToken"));
+    const currUser = localStorage.getItem("username");
+    try {
+      const path = "/api/getUser/" + currUser;
+      const response = await axiosInstance.get(path);
+      if (response.status == 200) {
+        return response.data;
+      } else {
+        return "Couldn't fetch user details";
+      }
+    } catch(error) {
+      console.error(error);
+      return "ERROR";
+    }    
+  },
+
+  updateUser: async(new_details): Promise<any> => {
+    const token = jwtDecode(localStorage.getItem("authToken"));
+    const currUser = localStorage.getItem("username");
+    try {
+      const path = "/api/updateUser/" + currUser;
+      const response = await axiosInstance.put(path, new_details);
+      if (response.status == 200) {
+        localStorage.setItem("username", new_details.new_username);
+        return "SUCCESS";
+      } else {
+        return "ERROR";
+      }
+    } catch(error) {
+      console.error(error);
+      return "ERROR";
+    }
+  },
   
   // Sign up function
   signUp: async (username: string, password: string, email: string): Promise<AuthResponse> => {
@@ -248,7 +285,8 @@ export const api = {
         "idx":0,
         "username": username,
         "password_hash": password,
-        "email": email
+        "email": email,
+        "created_at": "2026-08-01"
       });
       if (signUpResponse.status==201) {
           const loginResponse = await api.login(username, password);
