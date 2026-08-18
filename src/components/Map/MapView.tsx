@@ -485,6 +485,13 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
       setMapStyleLayer(newMapStyle);
       map.setView([37.75454, -122.44254], 13);
       setMapReady(true);
+      map.on("mousedown zoomstart", () => setIsTimerOn(false));
+      map.on("mouseup zoomend", () => setIsTimerOn(true));
+
+      /*
+      map.on("zoomstart", () => console.log("movement started"));
+      map.on("zoomend", () => console.log("movement ended"));
+      */
     }
 
     return () => {
@@ -582,7 +589,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
         return () => clearInterval(timer);      
     }
   }, [isTimerOn]);
-
+  
   useEffect(() => {
     if (currMapType == "vlm") {
       setRecentLocations(null); // reset state
@@ -910,7 +917,8 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
     } else if (currMapType == 'vlm') {
       setCurrMapType('vdm');
     }
-  }  
+  }
+  
   return (
     <div
       ref={mapModuleRef}

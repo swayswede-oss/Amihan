@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Mail, Phone, Calendar, Settings } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { UserProfile } from '../../App';
+import { api } from '../../services/api.ts';
 
 type ProfileMenuProps = {
   open: boolean;
@@ -19,12 +21,31 @@ function getInitials(name: string) {
 }
 
 export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: ProfileMenuProps) {
+  const [name, setName] = useState("");
+  const [memberSince, setMemberSince] = useState("");
+  const [email, setEmail] = useState("");
+  useEffect(() => {
+    async function fetchUserDetails() {
+      const fetchedDetails = await api.getUser();
+      setName(fetchedDetails.username);
+      setEmail(fetchedDetails.email);
+      const memberDate = new Date(fetchedDetails.created_at + "T00:00:00").toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+           
+      setMemberSince(memberDate);
+    }
+    fetchUserDetails();
+  }, [user]);
+  /*
   const memberSince = new Date(user.createdAt).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   });
-
+  */
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
@@ -37,16 +58,18 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: Pro
         >
           <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
             <span className={`text-sm ${open ? 'text-blue-600' : 'text-gray-600'}`}>
-              {getInitials(user.name)}
+              {getInitials(name)}
             </span>
           </div>
           <div className="flex-1 min-w-0 text-left">
             <p className={`text-sm truncate ${open ? 'text-blue-600' : 'text-gray-900'}`}>
-              {user.name}
+              {name}
             </p>
+            {/*
             <p className={`text-xs truncate ${open ? 'text-blue-500' : 'text-gray-600'}`}>
               {user.position}
             </p>
+            */}
           </div>
         </button>
       </PopoverTrigger>
@@ -60,11 +83,11 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: Pro
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-base text-gray-600">{getInitials(user.name)}</span>
+              <span className="text-base text-gray-600">{getInitials(name)}</span>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.position}</p>
+              <p className="text-sm font-medium text-gray-900">{name}</p>
+              {/*<p className="text-xs text-gray-500">{user.position}</p>*/}
             </div>
           </div>
         </div>
@@ -82,10 +105,11 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: Pro
             <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <div className="min-w-0">
               <p className="text-xs text-gray-500">Email</p>
-              <p className="text-gray-900 truncate">{user.email}</p>
+              <p className="text-gray-900 truncate">{email}</p>
             </div>
           </div>
 
+          {/*
           <div className="flex items-center gap-3 text-sm">
             <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <div>
@@ -93,6 +117,7 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: Pro
               <p className="text-gray-900">{user.phone}</p>
             </div>
           </div>
+          */}
         </div>
 
         <div className="p-4 pt-0">
@@ -101,7 +126,7 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: Pro
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-sm"
           >
             <Settings className="w-4 h-4" />
-            <span>Profile Settings</span>
+            <span>Settings</span>
           </button>
         </div>
       </PopoverContent>
