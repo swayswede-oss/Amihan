@@ -26,7 +26,10 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
   useEffect(() => {
     // fetch user's vehicles
     async function fetchVehicles() {
-      const fetched = await api.getUserVehicles();
+      const fetched = await api.getGroupVehicles();
+      if (!Array.isArray(fetched)) {
+        return;
+      }
       const vehicles = [];
       for (const v of fetched) {
         const fetchedLocs = await api.getRecentVehicleLocations(v.vehicle_id);

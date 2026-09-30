@@ -12,6 +12,7 @@ export function Login({ onLogin, onSwitchToSignUp, onForgotPassword }: LoginProp
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showBayBridge, setShowBayBridge] = useState(false);
   const [errors, setErrors] = useState<{
     username?: string;
     password?: string;
@@ -41,7 +42,14 @@ export function Login({ onLogin, onSwitchToSignUp, onForgotPassword }: LoginProp
 
   return (
     <div className="login-background min-h-screen flex items-center justify-center p-4">
-      <div className="rounded-2xl shadow-xl w-full max-w-md overflow-hidden" style={{ backgroundColor: '#e8eef5' }}>
+      <div
+        className={`login-bay-bridge${showBayBridge ? ' is-visible' : ''}`}
+        aria-hidden="true"
+      />
+      <div
+        className="rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+        style={{ backgroundColor: '#e8eef5', position: 'relative', zIndex: 1 }}
+      >
         {/* Header */}
         <div className="bg-black px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-center">
           <img
@@ -119,7 +127,17 @@ export function Login({ onLogin, onSwitchToSignUp, onForgotPassword }: LoginProp
             </div>
 
             {/* Forgot Password */}
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showBayBridge}
+                aria-label="Toggle Bay Bridge background"
+                className="login-bg-toggle"
+                onClick={() => setShowBayBridge((current) => !current)}
+              >
+                <span className="login-bg-toggle-thumb" />
+              </button>
               <button
                 type="button"
                 onClick={onForgotPassword}

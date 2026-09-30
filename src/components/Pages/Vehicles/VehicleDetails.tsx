@@ -10,6 +10,14 @@ type VehicleDetailsProps = {
   onViewHistory: (vehicle: Vehicle) => void;
 };
 
+export function formatCoordinate(value: unknown): string {
+  const coordinate = Number(value);
+  if (!Number.isFinite(coordinate)) {
+    return '';
+  }
+  return coordinate.toFixed(5);
+}
+
 export function formatDate(dateStr, dateOnly): string {
   const rawDate = new Date(dateStr);
   if (dateOnly == false) {
@@ -96,7 +104,7 @@ export function VehicleDetails({ vehicle, onClose, onZoomIn, onTripSelect, onVie
             </label>
             <p className="text-sm lg:text-base text-gray-900">{recentAddress}</p>
             <p className="text-xs lg:text-sm text-gray-500 mt-1">
-              Coordinates: {recentCoords[0]}, {recentCoords[1]}
+              Coordinates: {formatCoordinate(recentCoords[0])}, {formatCoordinate(recentCoords[1])}
             </p>
           </div>
           {/* Metrics Grid */}

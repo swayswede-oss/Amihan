@@ -1,10 +1,9 @@
 import React,{ useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Maximize, Minimize2 } from 'lucide-react';
+import { Search, Maximize, Minimize2, Menu } from 'lucide-react';
 import { Vehicle } from '../../App';
 import { VehicleDetailTile } from '../Pages/Vehicles/VehicleDetailTile';
 import 'leaflet/dist/leaflet.css';
-import polyline from '@mapbox/polyline';
 import L from 'leaflet';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-leaflet';
@@ -41,6 +40,75 @@ const MAP_STYLE_URLS = {
 } as const;
 
 const MAP_FOCUS_ZOOM = 15;
+const ROUTE_TOGGLE_ON = '#E15B5B';
+const ROUTE_TOGGLE_ON_BORDER = '#C44545';
+const ROUTE_TOGGLE_OFF = '#7A3A3E';
+const ROUTE_TOGGLE_OFF_BORDER = '#5C2A2E';
+
+async function loadTripPathPoints(tripId) {
+  const points = await api.getFilteredTripLocs(tripId);
+  return Array.isArray(points) ? points : [];
+}
+
+function tripPointLatLng(point): [number, number] | null {
+  if (Array.isArray(point) && point.length >= 2) {
+    const lat = Number(point[0]);
+    const lng = Number(point[1]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return [lat, lng];
+    }
+    return null;
+  }
+
+  const lat = Number(point?.lat);
+  const lng = Number(point?.lon ?? point?.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return [lat, lng];
+  }
+  return null;
+}
+
+function tripLatLngs(points: unknown[]): L.LatLngExpression[] {
+  return points.flatMap((point) => {
+    const latLng = tripPointLatLng(point);
+    return latLng ? [latLng] : [];
+  });
+}
+
+function plotTripMarkers(map: L.Map, latLngs: L.LatLngExpression[]) {
+  const markers = latLngs.map((latLng) =>
+    L.circleMarker(latLng, {
+      radius: 2,
+      color: '#FF0000',
+      weight: 1,
+      fillColor: '#FF0000',
+      fillOpacity: 1,
+    }),
+  );
+
+  const group = L.featureGroup(markers).addTo(map);
+  if (latLngs.length === 1) {
+    map.setView(latLngs[0] as L.LatLngExpression, 17);
+  } else {
+    map.fitBounds(group.getBounds().pad(0.15));
+  }
+  return group;
+}
+
+function plotTripLine(map: L.Map, latLngs: L.LatLngExpression[]) {
+  if (latLngs.length < 2) {
+    return null;
+  }
+
+  return L.polyline(latLngs, {
+    color: '#FF0000',
+    weight: 1,
+    opacity: 1,
+    lineJoin: 'miter',
+    lineCap: 'butt',
+    smoothFactor: 0,
+  }).addTo(map);
+}
 
 function elevateLeafletOverlayPanes(map: L.Map) {
   const paneZIndexes: Record<string, string> = {
@@ -96,7 +164,7 @@ function VehiclePopupCard({ id, data, changeType, popupType })  {
   )     
 }
 
-export function VehicleHistoryMap({ selectedTrip }) {
+export function VehicleHistoryMap({ selectedTrip, onMenuClick }) {
   // map container and instance references
   const mapModuleRef = useRef<HTMLDivElement | null>(null);  
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -108,12 +176,12 @@ export function VehicleHistoryMap({ selectedTrip }) {
   const [mapReady, setMapReady] = useState<boolean>(false);
 
   // display data layers  
-  const [polyString, setPolyString] = useState<string>(""); // VLM polyline
-  const [rawCoords, setRawCoords] = useState<Array<[number, number]> | null>(null);
+  const [rawCoords, setRawCoords] = useState<unknown[] | null>(null);
 
   // set map tile layer
   const [mapStyleLayer, setMapStyleLayer] = useState<any>(null);
   const [mapColor, setMapColor] = useState<boolean>(false);
+  const [showRouteLine, setShowRouteLine] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   useEffect(() => {
@@ -176,59 +244,56 @@ export function VehicleHistoryMap({ selectedTrip }) {
   }, []);
 
   useEffect(() => {
-    // fetch polyline data
-    async function loadPolyString() {
-      const data = await api.getPolyline(selectedTrip);
-      if (data == "INVALID") {
-        const defaultTrips = await api.getTripLocations(selectedTrip);
-        setRawCoords(defaultTrips);
+    let cancelled = false;
+
+    async function loadTripPoints() {
+      const points = await loadTripPathPoints(selectedTrip);
+      if (cancelled) {
+        return;
       }
-      setPolyString(data);
-    }        
-    loadPolyString();
+      setRawCoords(points);
+    }
+
+    loadTripPoints();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedTrip]);
 
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || polyString == "") return;
+    if (!map || !rawCoords || rawCoords.length === 0) {
+      return;
+    }
 
-    // handle "not enough points" case;
-    var coords: Array<[number, number]>;
-    var fetchedLine;
-    if (polyString != "INVALID") {
-        coords = polyline.decode(polyString);
-    } else {
-        coords = rawCoords;
+    const latLngs = tripLatLngs(rawCoords);
+    if (latLngs.length === 0) {
+      return;
     }
-    const firstPoint = coords[0];
-    // set parameters for the polyline
-    if (polyString != "INVALID") {
-      map.setView([firstPoint[0], firstPoint[1]], 17);
-      fetchedLine = L.polyline(coords, {
-        color: '#FF0000',
-        weight: 5,
-        opacity: 0.75,
-        lineJoin: 'round',
-        lineCap: 'round'
-      }).addTo(map);
-      return () => {
-        map.removeLayer(fetchedLine);
-        setPolyString("");
-      };
-    } else if (coords.length > 0){
-      map.setView([firstPoint.lat, firstPoint.lon], 17);
-      const markers = []
-      for (const point of coords) {
-          const currMarker = L.marker([point.lat, point.lon], 17);
-          markers.push(currMarker);
-      }
-      L.featureGroup(markers).addTo(map);
-      return () => {
-        map.removeLayer(markers);
-        setRawCoords(null);
-      };      
+
+    const group = plotTripMarkers(map, latLngs);
+
+    return () => {
+      map.removeLayer(group);
+    };
+  }, [rawCoords]);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !showRouteLine || !rawCoords || rawCoords.length === 0) {
+      return;
     }
-  }, [rawCoords, polyString]);
+
+    const line = plotTripLine(map, tripLatLngs(rawCoords));
+    if (!line) {
+      return;
+    }
+
+    return () => {
+      map.removeLayer(line);
+    };
+  }, [rawCoords, showRouteLine]);
 
   function setMapStyle(useDark: boolean) {
     const map = mapInstanceRef.current;
@@ -305,6 +370,14 @@ export function VehicleHistoryMap({ selectedTrip }) {
         }}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onMenuClick}
+            aria-label="Open menu"
+            className="lg:hidden flex-shrink-0 p-2 text-gray-300 hover:text-white rounded-lg"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
           <div className="min-w-0">
             <h1
               className="text-base lg:text-lg truncate"
@@ -326,9 +399,54 @@ export function VehicleHistoryMap({ selectedTrip }) {
                 lineHeight: 1.2,
               }}
             >
-              {polyString == "INVALID" ? "Could not create accurate trip history line, showing coordinates only": ""}
+              {""}
             </p>
           </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showRouteLine}
+            aria-label="Toggle the line connecting trip points"
+            onClick={() => setShowRouteLine((visible) => !visible)}
+            className="rounded-lg transition-colors"
+            style={{
+              ...mapHeaderControlStyle,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '56px',
+              padding: 0,
+            }}
+          >
+            <span
+              style={{
+                position: 'relative',
+                display: 'block',
+                width: '40px',
+                height: '18px',
+                borderRadius: '9999px',
+                border: `1px solid ${
+                  showRouteLine ? ROUTE_TOGGLE_ON_BORDER : ROUTE_TOGGLE_OFF_BORDER
+                }`,
+                backgroundColor: showRouteLine ? ROUTE_TOGGLE_ON : ROUTE_TOGGLE_OFF,
+                transition: 'background-color 0.2s ease, border-color 0.2s ease',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '1px',
+                  left: showRouteLine ? '25px' : '1px',
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#FFFFFF',
+                  transition: 'left 0.2s ease',
+                }}
+              />
+            </span>
+          </button>
 
           <button
             type="button"
@@ -427,7 +545,7 @@ export function VehicleHistoryMap({ selectedTrip }) {
 }
 
 
-export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
+export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuClick }) {
 
   // map container and instance references
   const mapModuleRef = useRef<HTMLDivElement | null>(null);  
@@ -444,8 +562,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
   const [currMapType, setCurrMapType] = useState<string>("vdm");
 
   // display data layers
-  const [polyString, setPolyString] = useState<string>(""); // VLM polyline
-  const [rawCoords, setRawCoords] = useState<Array<[number, number]> | null>(null);
+  const [rawCoords, setRawCoords] = useState<unknown[] | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<string>("") // User selected Vehicle Name
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("") // User selected Vehicle ID
   const [selectedVehicleStatus, setSelectedVehicleStatus] = useState<number>(0);
@@ -594,16 +711,11 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
     if (currMapType == "vlm") {
       setRecentLocations(null); // reset state
 
-      // fetch polyline data
-      async function loadPolyString() {
-        const data = await api.getPolyline(selectedTrip);
-        if (data == "INVALID") {
-          const defaultTrips = await api.getTripLocations(selectedTrip);
-          setRawCoords(defaultTrips);
-        }
-        setPolyString(data);
-      }        
-      loadPolyString();
+      async function loadTripPoints() {
+        const points = await loadTripPathPoints(selectedTrip);
+        setRawCoords(points);
+      }
+      loadTripPoints();
     }
   }, [currMapType]);
   
@@ -611,8 +723,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
     if (currMapType == "vdm") {
       // fetch recent location data
       async function loadRecentLocations() {
-        setPolyString(""); // reset state
-        setRawCoords(null); // reset state
+        setRawCoords(null);
         const data = await api.getMostRecentLocations();
         const formattedLocations = [];
         for (const vehicle of data) {
@@ -630,54 +741,46 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
     }
   }, [currMapType, timerTick]);
 
-  // build VLM map layer with polyline
   useEffect(() => {
-    if (currMapType == "vlm") {
-      const map = mapInstanceRef.current;
-      if (!map || polyString == "") return;
-
-      // handle "not enough points" case;
-      var coords: Array<[number, number]>;
-      var fetchedLine;
-      if (polyString != "INVALID") {
-          coords = polyline.decode(polyString);
-      } else {
-          coords = rawCoords;
-      }
-      const firstPoint = coords[0];
-      // set parameters for the polyline
-      if (polyString != "INVALID") {
-        map.setView([firstPoint[0], firstPoint[1]], 17);
-        fetchedLine = L.polyline(coords, {
-          color: '#FF0000',
-          weight: 5,
-          opacity: 0.75,
-          lineJoin: 'round',
-          lineCap: 'round'
-        }).addTo(map);        
-      } else {
-        map.setView([firstPoint.lat, firstPoint.lon], 17);
-        fetchedLine = L.marker([firstPoint.lat, firstPoint.lon], 17).addTo(map);
-      }
-      
-      const popupDiv = document.createElement('div');
-      fetchedLine.bindPopup(popupDiv, { minWidth: 160 } );
-      fetchedLine.on('popupopen', () => {
-          setActivePopups((prev) => [
-            ...prev,
-            { id: selectedVehicle, data: [selectedTrip, selectedDate], container: popupDiv }
-          ]);
-        });
-
-        fetchedLine.on('popupclose', () => {
-          setActivePopups((prev) => prev.filter((p) => p.container !== popupDiv));
-        })        
-      return () => {
-          map.removeLayer(fetchedLine);
-          setPolyString("");
-      };
+    if (currMapType !== "vlm") {
+      return;
     }
-  }, [polyString, rawCoords, currMapType, selectedTrip]);    
+
+    const map = mapInstanceRef.current;
+    if (!map || !rawCoords || rawCoords.length === 0) {
+      return;
+    }
+
+    const latLngs = tripLatLngs(rawCoords);
+    if (latLngs.length === 0) {
+      return;
+    }
+
+    const group = plotTripMarkers(map, latLngs);
+    const line = plotTripLine(map, latLngs);
+    if (!group) {
+      return;
+    }
+
+    const popupDiv = document.createElement('div');
+    group.bindPopup(popupDiv, { minWidth: 160 });
+    group.on('popupopen', () => {
+      setActivePopups((prev) => [
+        ...prev,
+        { id: selectedVehicle, data: [selectedTrip, selectedDate], container: popupDiv },
+      ]);
+    });
+    group.on('popupclose', () => {
+      setActivePopups((prev) => prev.filter((popup) => popup.container !== popupDiv));
+    });
+
+    return () => {
+      map.removeLayer(group);
+      if (line) {
+        map.removeLayer(line);
+      }
+    };
+  }, [rawCoords, currMapType, selectedTrip]);    
 
   // build VDM map layer with coordinates
     const renderVehicleMarkers = useCallback(
@@ -934,6 +1037,14 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory }) {
         }}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onMenuClick}
+            aria-label="Open menu"
+            className="lg:hidden flex-shrink-0 p-2 text-gray-300 hover:text-white rounded-lg"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
           <div className="min-w-0">
             <h1
               className="text-base lg:text-lg truncate"

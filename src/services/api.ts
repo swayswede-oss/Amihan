@@ -135,14 +135,11 @@ export const api = {
     }
   },
 
-  getUserVehicles: async(): Promise<any> => {
-    const token = jwtDecode(localStorage.getItem("authToken"));
-    const currUser = localStorage.getItem("username");
+  getGroupVehicles: async(): Promise<any> => {
     try {
-      const path = "/api/getUserVehicles/" + currUser;
+      const path = "/admin/getGroupVehicles";
       const response = await axiosInstance.get(path);
       if (response.status == 200) {
-        console.log(currUser)
         return response.data
       } else {
         return "ERROR"
@@ -151,6 +148,11 @@ export const api = {
       console.log(error);
       return "ERROR";
     }
+  },
+
+  // Group vehicles replace the old per-user vehicle list.
+  getUserVehicles: async(): Promise<any> => {
+    return api.getGroupVehicles();
   },
   
   getTripLocations: async(tripId): Promise<Array<[number, number]>> => {
@@ -166,6 +168,21 @@ export const api = {
       console.log(error);
       return "An error occurred fetching trip locations";
     }    
+  },
+
+  getFilteredTripLocs: async(tripId): Promise<any> => {
+    try {
+      const path = "/api/getFilteredTripLocs/" + tripId;
+      const response = await axiosInstance.get(path);
+      if (response.status == 200) {
+        return response.data
+      } else {
+        return "Couldn't fetch trip locations"
+      }
+    } catch (error) {
+      console.log(error);
+      return "An error occurred fetching trip locations";
+    }
   },
 
   getVehicleTrips: async(vehicleId): Promise<any> => {

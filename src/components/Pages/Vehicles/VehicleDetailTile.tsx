@@ -14,6 +14,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Vehicle } from '../../../App';
+import { formatCoordinate } from './VehicleDetails.tsx';
 import { api } from "../../../services/api.ts";
 import { VehicleTripHistory } from './VehicleTripHistory.tsx';
 
@@ -422,7 +423,7 @@ export function VehicleDetailTile({
                     <p style={labelStyle}>Current Location</p>
                     <p style={valueStyle}>{lastSeen}</p>
                     <p style={{ ...labelStyle, marginTop: 4, lineHeight: 1.35 }}>
-                      Coordinates: {vehicle.location.lat}, {vehicle.location.lng}
+                      Coordinates: {formatCoordinate(vehicle.location.lat)}, {formatCoordinate(vehicle.location.lng)}
                     </p>
                   </div>
                 </div>

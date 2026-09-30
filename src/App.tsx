@@ -18,6 +18,12 @@ import { Settings } from './components/Pages/Settings/Settings';
 import { AddVehicle } from './components/Pages/Settings/AddVehicle';
 import { RemoveVehicle } from './components/Pages/Settings/RemoveVehicle';
 import { ProfileSettings } from './components/Pages/Settings/ProfileSettings';
+import {
+  loadMenuVisibility,
+  saveMenuVisibility,
+  type MenuVisibility,
+  type ToggleableMenuItemId,
+} from './components/Layout/menuVisibility';
 
 
 export type Vehicle = {
@@ -61,10 +67,23 @@ export default function App() {
   const [historyFocusedVehicleId, setHistoryFocusedVehicleId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState<UserProfile>(defaultUser);
+  const [menuVisibility, setMenuVisibility] = useState<MenuVisibility>(loadMenuVisibility);
+
+  const handleMenuVisibilityChange = (id: ToggleableMenuItemId, visible: boolean) => {
+    setMenuVisibility((current) => {
+      const next = { ...current, [id]: visible };
+      saveMenuVisibility(next);
+      return next;
+    });
+    if (!visible && currentView === id) {
+      setCurrentView('map');
+    }
+  };
 
   const handleLogin = async (username: string, password: string) => {
-    /* -- UNCOMMENT THIS SECTION TO USE TEST USER -- */
-    /*
+    // Temporary local bypass: any non-empty username and password signs in.
+    // Comment this block back out and restore the API login below when real credentials work again.
+    void password;
     setUser((prev) => ({
       ...prev,
       name: username,
@@ -72,7 +91,8 @@ export default function App() {
     }));
     setIsAuthenticated(true);
     console.log('Login successful:', username);
-    */
+
+    /* -- CREDENTIAL CHECK AGAINST map_api --
     try {
       const response = await api.login(username, password);
       setUser((prev) => ({
@@ -84,6 +104,7 @@ export default function App() {
       console.error("Error:", error);
       alert("Incorrect Credentials. Please Try Again.")
     }
+    */
   };
 
   const handleLogout = () => {
@@ -194,17 +215,31 @@ export default function App() {
         onClose={() => setIsSidebarOpen(false)}
         onLogout={handleLogout}
         user={user}
+        menuVisibility={menuVisibility}
       />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header onMenuClick={() => setIsSidebarOpen(true)} />
+        {currentView !== 'map' && currentView !== 'trip-history' && (
+          <Header onMenuClick={() => setIsSidebarOpen(true)} />
+        )}
 
         {currentView === 'map' && (
           <div className="flex-1 min-h-0 overflow-hidden">
-            <RecentLocationsMap onViewTripHistory={handleTripSelect}/>
+            <RecentLocationsMap
+              onViewTripHistory={handleTripSelect}
+              onMenuClick={() => setIsSidebarOpen(true)}
+            />
           </div>
         )}
-        {currentView !== 'map' && (
+        {currentView === 'trip-history' && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <VehicleTripHistory
+              trip={selectedTrip}
+              onMenuClick={() => setIsSidebarOpen(true)}
+            />
+          </div>
+        )}
+        {currentView !== 'map' && currentView !== 'trip-history' && (
           <main className="flex-1 flex flex-col overflow-y-auto">
             {currentView === 'dashboard' && (
               <Dashboard
@@ -221,15 +256,14 @@ export default function App() {
                 onFocusHandled={() => setHistoryFocusedVehicleId(null)}
               />
             )}
-            {currentView === 'trip-history' && (
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <VehicleTripHistory trip={selectedTrip} />
-              </div>              
-            )}
             {currentView === 'analytics' && <Analytics />}
             {currentView === 'alerts' && <Alerts />}
             {currentView === 'settings' && (
-              <Settings onNavigate={(view)=>setCurrentView(view)}/>
+              <Settings
+                onNavigate={(view) => setCurrentView(view)}
+                menuVisibility={menuVisibility}
+                onMenuVisibilityChange={handleMenuVisibilityChange}
+              />
             )}
             {currentView === 'add-vehicle' && (
               <AddVehicle onBack={() => setCurrentView('settings')} currentUser={user.name} />

@@ -37,7 +37,10 @@ export function AddVehicle({ onBack, currentUser }: AddVehicleProps) {
 
   useEffect(() => {
     async function fetchVehicles() {
-      const fetchedVehicles = await api.getUserVehicles();
+      const fetchedVehicles = await api.getGroupVehicles();
+      if (!Array.isArray(fetchedVehicles)) {
+        return;
+      }
       const fetchedNames = [];
       for (const v of fetchedVehicles) {
         fetchedNames.push(v.name);

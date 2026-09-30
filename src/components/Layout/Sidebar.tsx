@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '../../App';
 import { ProfileMenu } from './ProfileMenu';
+import { isMenuItemVisible, type MenuVisibility } from './menuVisibility';
 
 type MenuItemId = 'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'settings';
 
@@ -25,6 +26,7 @@ type SidebarProps = {
   onClose: () => void;
   onLogout: () => void;
   user: UserProfile;
+  menuVisibility: MenuVisibility;
 };
 
 const DEFAULT_MENU_ORDER: MenuItemId[] = [
@@ -64,17 +66,29 @@ function loadMenuOrder(): MenuItemId[] {
   return [...DEFAULT_MENU_ORDER];
 }
 
-export function Sidebar({ currentView, onViewChange, isOpen, onClose, onLogout, user }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, isOpen, onClose, onLogout, user, menuVisibility }: SidebarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [menuOrder, setMenuOrder] = useState<MenuItemId[]>(loadMenuOrder);
+
+  const visibleMenuOrder = menuOrder.filter((id) => isMenuItemVisible(id, menuVisibility));
 
   const handleDragEnd = (result: DropResult) => {
     const { source, destination } = result;
     if (!destination || source.index === destination.index) return;
 
-    const newOrder = Array.from(menuOrder);
-    const [reorderedItem] = newOrder.splice(source.index, 1);
-    newOrder.splice(destination.index, 0, reorderedItem);
+    const reorderedVisible = Array.from(visibleMenuOrder);
+    const [reorderedItem] = reorderedVisible.splice(source.index, 1);
+    reorderedVisible.splice(destination.index, 0, reorderedItem);
+
+    let visibleIndex = 0;
+    const newOrder = menuOrder.map((id) => {
+      if (!isMenuItemVisible(id, menuVisibility)) {
+        return id;
+      }
+      const nextId = reorderedVisible[visibleIndex];
+      visibleIndex += 1;
+      return nextId;
+    });
 
     setMenuOrder(newOrder);
     localStorage.setItem(SIDEBAR_MENU_ORDER_KEY, JSON.stringify(newOrder));
@@ -126,7 +140,7 @@ export function Sidebar({ currentView, onViewChange, isOpen, onClose, onLogout, 
                   {...provided.droppableProps}
                   className="space-y-2"
                 >
-                  {menuOrder.map((id, index) => {
+                  {visibleMenuOrder.map((id, index) => {
                     const item = MENU_ITEM_CONFIG[id];
                     const Icon = item.icon;
                     const isActive = currentView === id;

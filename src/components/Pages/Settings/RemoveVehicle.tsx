@@ -17,8 +17,8 @@ export function RemoveVehicle({ onBack }: RemoveVehicleProps) {
 
   useEffect(() => {
     async function fetchVehicles() {
-      const fetchedVehicles = await api.getUserVehicles();
-      setVehicles(fetchedVehicles);
+      const fetchedVehicles = await api.getGroupVehicles();
+      setVehicles(Array.isArray(fetchedVehicles) ? fetchedVehicles : []);
     }
     fetchVehicles();
   }, [responseMessage]);
