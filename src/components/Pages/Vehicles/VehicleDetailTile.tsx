@@ -1,5 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   ArrowLeft,
   X,
@@ -12,6 +14,7 @@ import {
   FileText,
   Clock,
   Calendar,
+  Download,
 } from 'lucide-react';
 import { Vehicle } from '../../../App';
 import { formatCoordinate } from './VehicleDetails.tsx';
@@ -32,6 +35,71 @@ export type VehicleDetailTileProps = {
 const TILE_BG = '#4A5364';
 const TILE_CONTROL_BG = '#3F4756';
 const TILE_BORDER = '#454E5E';
+
+const VEHICLE_DATA_HEADERS = [
+  'Trip ID',
+  'Trip Date',
+  'Address',
+  'Latitude',
+  'Longitude',
+  'Timestamp',
+];
+
+function escapeCsv(value: unknown): string {
+  const text = value == null ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function vehicleDataFilename(name: string, extension: 'csv' | 'pdf'): string {
+  const safe = name.trim().replace(/[^\w.-]+/g, '_') || 'vehicle';
+  return `${safe}-vehicle-data.${extension}`;
+}
+
+function downloadCsvFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildVehicleDataCsv(rows: string[][]): string {
+  return [VEHICLE_DATA_HEADERS, ...rows]
+    .map((row) => row.map(escapeCsv).join(','))
+    .join('\n');
+}
+
+function downloadVehicleDataPdf(name: string, rows: string[][]) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
+  const title = name.trim() || 'Vehicle';
+  doc.setFontSize(16);
+  doc.text(title, 40, 40);
+  doc.setFontSize(10);
+  doc.setTextColor(75, 85, 99);
+  doc.text(
+    rows.length === 0
+      ? 'No data logged'
+      : `${rows.length} record${rows.length === 1 ? '' : 's'}`,
+    40,
+    58,
+  );
+  doc.setTextColor(0, 0, 0);
+  autoTable(doc, {
+    startY: 72,
+    head: [VEHICLE_DATA_HEADERS],
+    body: rows,
+    styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
+    headStyles: { fillColor: [74, 83, 100], textColor: 255 },
+    margin: { left: 40, right: 40 },
+  });
+  doc.save(vehicleDataFilename(name, 'pdf'));
+}
+
+const FORMAT_TOGGLE_RESERVE = 78;
 
 function getPresenceLabel(status) {
   switch (status) {
@@ -62,7 +130,8 @@ export function VehicleDetailTile({
   usePortal = true,
 }: VehicleDetailTileProps) {
   const [mode, setMode] = useState<'summary' | 'details'>('summary');
-  const lastSeen = vehicle.address || addressFallback || '';
+  const lastSeen = vehicle.address || addressFallback || 'No location logged';
+  const hasLoggedLocation = Boolean(vehicle.address || addressFallback);
   const [selectedTripHistory, setSelectedTripHistory] = useState<any | null>(null);
 
   const presenceText = `${getPresenceLabel(vehicle.status)} · Updated ${vehicle.lastUpdate}`;
@@ -137,17 +206,93 @@ export function VehicleDetailTile({
   };
   
   const [recentTrips, setRecentTrips] = useState([]);
+  const [tripsLoaded, setTripsLoaded] = useState(false);
+  const [isDownloadingData, setIsDownloadingData] = useState(false);
+  const [downloadAsPdf, setDownloadAsPdf] = useState(false);
+
+  async function handleDownloadVehicleData() {
+    if (isDownloadingData) {
+      return;
+    }
+    setIsDownloadingData(true);
+    try {
+      const fetchedTrips = await api.getVehicleTrips(vehicle.id);
+      const trips = Array.isArray(fetchedTrips) ? fetchedTrips : [];
+      const tripLocations = await Promise.all(
+        trips.map(async (trip) => {
+          if (!trip?.trip_id) {
+            return { trip, locations: [] };
+          }
+          const fetchedLocs = await api.getTripLocations(trip.trip_id);
+          return {
+            trip,
+            locations: Array.isArray(fetchedLocs) ? fetchedLocs : [],
+          };
+        }),
+      );
+
+      const rows: string[][] = [];
+      for (const { trip, locations } of tripLocations) {
+        if (locations.length === 0) {
+          if (trip?.trip_id || trip?.trip_date) {
+            rows.push([
+              trip.trip_id ?? '',
+              trip.trip_date ?? '',
+              '',
+              '',
+              '',
+              '',
+            ]);
+          }
+          continue;
+        }
+        for (const loc of locations) {
+          rows.push([
+            trip?.trip_id ?? loc.trip_id ?? '',
+            trip?.trip_date ?? '',
+            loc.address ?? '',
+            loc.lat ?? '',
+            loc.lon ?? loc.lng ?? '',
+            loc.timestamp ?? '',
+          ]);
+        }
+      }
+
+      if (downloadAsPdf) {
+        downloadVehicleDataPdf(vehicle.name, rows);
+      } else {
+        const content = rows.length === 0 ? '' : buildVehicleDataCsv(rows);
+        downloadCsvFile(vehicleDataFilename(vehicle.name, 'csv'), content);
+      }
+    } catch (error) {
+      console.error(error);
+      if (downloadAsPdf) {
+        downloadVehicleDataPdf(vehicle.name, []);
+      } else {
+        downloadCsvFile(vehicleDataFilename(vehicle.name, 'csv'), '');
+      }
+    } finally {
+      setIsDownloadingData(false);
+    }
+  }
 
   useEffect(() => {
-    // fetch all the vehicle's trips
+    let cancelled = false;
     async function fetchTrips() {
       const fetchedTrips = await api.getVehicleTrips(vehicle.id);
-      if (fetchedTrips.length > 0) {
+      if (cancelled) {
+        return;
+      }
+      if (Array.isArray(fetchedTrips) && fetchedTrips.length > 0) {
         setRecentTrips(fetchedTrips);
       }
+      setTripsLoaded(true);
     }
     fetchTrips();
-  }, []);  
+    return () => {
+      cancelled = true;
+    };
+  }, [vehicle.id]);  
 
   const overlay = (
     <div
@@ -394,6 +539,112 @@ export function VehicleDetailTile({
                 <Route style={{ width: 16, height: 16 }} aria-hidden="true" />
                 View Most Recent Trip
               </button>
+              <div
+                style={{
+                  ...secondaryButtonStyle,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 0,
+                  opacity: isDownloadingData ? 0.7 : 1,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleDownloadVehicleData}
+                  disabled={isDownloadingData}
+                  aria-label={`Download vehicle data for ${vehicle.name} as ${downloadAsPdf ? 'PDF' : 'CSV'}`}
+                  aria-busy={isDownloadingData}
+                  className="flex w-full items-center justify-center gap-2 text-sm"
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'inherit',
+                    fontWeight: 500,
+                    cursor: isDownloadingData ? 'wait' : 'pointer',
+                    padding: `10px ${FORMAT_TOGGLE_RESERVE}px`,
+                    borderRadius: 8,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Download style={{ width: 16, height: 16 }} aria-hidden="true" />
+                  {isDownloadingData ? 'Downloading...' : 'Download Vehicle Data'}
+                </button>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={downloadAsPdf}
+                  aria-label={
+                    downloadAsPdf
+                      ? 'PDF selected. Switch download format to CSV'
+                      : 'CSV selected. Switch download format to PDF'
+                  }
+                  disabled={isDownloadingData}
+                  onClick={() => setDownloadAsPdf((current) => !current)}
+                  style={{
+                    position: 'absolute',
+                    right: 8,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    border: 'none',
+                    background: 'transparent',
+                    padding: 0,
+                    cursor: isDownloadingData ? 'wait' : 'pointer',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 9,
+                      lineHeight: 1,
+                      fontWeight: downloadAsPdf ? 500 : 700,
+                      letterSpacing: '0.02em',
+                      color: downloadAsPdf ? '#94A3B8' : '#F8FAFC',
+                    }}
+                  >
+                    CSV
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: 'relative',
+                      display: 'block',
+                      width: 28,
+                      height: 14,
+                      borderRadius: 9999,
+                      border: `1px solid ${downloadAsPdf ? '#60A5FA' : TILE_BORDER}`,
+                      backgroundColor: downloadAsPdf ? '#3B82F6' : '#2A3140',
+                      transition: 'background-color 0.2s ease, border-color 0.2s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: 1,
+                        left: downloadAsPdf ? 13 : 1,
+                        width: 10,
+                        height: 10,
+                        borderRadius: 9999,
+                        backgroundColor: '#FFFFFF',
+                        transition: 'left 0.2s ease',
+                      }}
+                    />
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      lineHeight: 1,
+                      fontWeight: downloadAsPdf ? 700 : 500,
+                      letterSpacing: '0.02em',
+                      color: downloadAsPdf ? '#F8FAFC' : '#94A3B8',
+                    }}
+                  >
+                    PDF
+                  </span>
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => setMode('details')}
@@ -422,9 +673,11 @@ export function VehicleDetailTile({
                   <div className="min-w-0">
                     <p style={labelStyle}>Current Location</p>
                     <p style={valueStyle}>{lastSeen}</p>
-                    <p style={{ ...labelStyle, marginTop: 4, lineHeight: 1.35 }}>
-                      Coordinates: {formatCoordinate(vehicle.location.lat)}, {formatCoordinate(vehicle.location.lng)}
-                    </p>
+                    {hasLoggedLocation && (
+                      <p style={{ ...labelStyle, marginTop: 4, lineHeight: 1.35 }}>
+                        Coordinates: {formatCoordinate(vehicle.location.lat)}, {formatCoordinate(vehicle.location.lng)}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -434,7 +687,7 @@ export function VehicleDetailTile({
                   <Clock style={iconStyle} aria-hidden="true" />
                   <div className="min-w-0">
                     <p style={labelStyle}>Last Update</p>
-                    <p style={valueStyle}>{vehicle.lastUpdate}</p>
+                    <p style={valueStyle}>{vehicle.lastUpdate || 'No data logged'}</p>
                   </div>
                 </div>
 
@@ -534,6 +787,20 @@ export function VehicleDetailTile({
                   <span style={{ fontSize: 12, fontWeight: 500 }}>Recent Trips</span>
                 </div>
                 <div style={{ display: 'grid', gap: 8 }}>
+                  {tripsLoaded && recentTrips.length === 0 ? (
+                    <div
+                      style={{
+                        borderRadius: 8,
+                        border: `1px solid ${TILE_BORDER}`,
+                        backgroundColor: TILE_CONTROL_BG,
+                        padding: '10px 12px',
+                        fontSize: 13,
+                        color: '#94A3B8',
+                      }}
+                    >
+                      No trips logged for this vehicle.
+                    </div>
+                  ) : null}
                   {recentTrips.map((trip) => (
                     <div
                       key={trip.trip_id}

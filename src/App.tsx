@@ -6,12 +6,12 @@ import { VehicleList } from './components/Pages/Vehicles/VehicleList';
 // import { VehicleDetails } from './components/Pages/Vehicles/VehicleDetails';
 import { Analytics } from './components/Pages/Analytics/Analytics';
 import { Alerts } from './components/Pages/Alerts/Alerts';
-import { SignUp } from './components/Authentication/SignUp';
 import { Login } from './components/Authentication/Login';
 import { ForgotPassword } from './components/Authentication/ForgotPassword';
 import { RecentLocationsMap, /*VehicleHistoryMap*/ } from './components/Map/MapView.tsx';
 import { VehicleHistory } from './components/Pages/VehicleHistory/VehicleHistory';
 import { VehicleTripHistory } from './components/Pages/Vehicles/VehicleTripHistory';
+import { VehicleNoData } from './components/Pages/Vehicles/VehicleNoData';
 import { VehicleDetailTile} from './components/Pages/Vehicles/VehicleDetailTile.tsx';
 import { api } from './services/api';
 import { Settings } from './components/Pages/Settings/Settings';
@@ -59,11 +59,12 @@ const defaultUser: UserProfile = {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authView, setAuthView] = useState<'login' | 'signup' | 'forgot-password'>('login');
-  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'settings' | 'trip-history'>('dashboard');
+  const [authView, setAuthView] = useState<'login' | 'forgot-password'>('login');
+  const [currentView, setCurrentView] = useState<'map' | 'dashboard' | 'vehicles' | 'vehicle-history' | 'analytics' | 'alerts' | 'settings' | 'trip-history' | 'no-vehicle-data'>('dashboard');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [focusedVehicleId, setFocusedVehicleId] = useState<string | null>(null);
   const [selectedTrip, setSelectedTrip] = useState<any | null >(null);
+  const [noDataVehicleName, setNoDataVehicleName] = useState<string | null>(null);
   const [historyFocusedVehicleId, setHistoryFocusedVehicleId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState<UserProfile>(defaultUser);
@@ -81,18 +82,6 @@ export default function App() {
   };
 
   const handleLogin = async (username: string, password: string) => {
-    // Temporary local bypass: any non-empty username and password signs in.
-    // Comment this block back out and restore the API login below when real credentials work again.
-    void password;
-    setUser((prev) => ({
-      ...prev,
-      name: username,
-      email: `${username}@amihan.com`,
-    }));
-    setIsAuthenticated(true);
-    console.log('Login successful:', username);
-
-    /* -- CREDENTIAL CHECK AGAINST map_api --
     try {
       const response = await api.login(username, password);
       setUser((prev) => ({
@@ -100,11 +89,11 @@ export default function App() {
           name: response.username
       }));
       setIsAuthenticated(true);
+      console.log('Login successful:', username);
     } catch (error) {
       console.error("Error:", error);
       alert("Incorrect Credentials. Please Try Again.")
     }
-    */
   };
 
   const handleLogout = () => {
@@ -138,7 +127,19 @@ export default function App() {
     setIsSidebarOpen(false);
   };
 
+  const showNoVehicleData = (vehicleName?: string | null) => {
+    setNoDataVehicleName(vehicleName ?? selectedVehicle?.name ?? null);
+    setSelectedTrip(null);
+    setSelectedVehicle(null);
+    setCurrentView('no-vehicle-data');
+    setIsSidebarOpen(false);
+  };
+
   const handleTripSelect = (trip) => {
+    if (!trip?.trip_id) {
+      showNoVehicleData();
+      return;
+    }
     setSelectedVehicle(null);
     setCurrentView('trip-history');
     setSelectedTrip(trip);
@@ -154,43 +155,17 @@ export default function App() {
     console.log(allTrips);
   }
   */
-  const handleSignUp = async (username: string, password: string, email: string) => {
-    try {
-      // Call your backend API
-      const response = await api.signUp(username, password, email);
-      
-      setUser((prev) => ({
-        ...prev,
-        name: username,
-          /*
-          email,
-          createdAt: new Date().toISOString(),
-          */
-        }));
-      setIsAuthenticated(true);
-      console.log('Sign up successful:', response?.username);
-    } catch (error) {
-      console.error('Sign up failed:', error);
-      // You can show an error message to the user here
-      alert('Sign up failed. Please try again.');
-    }
-  };
-
   // Show authentication screens if not logged in
   if (!isAuthenticated) {
-    if (authView === 'login') {
-      return (
-        <Login
-          onLogin={handleLogin}
-          onSwitchToSignUp={() => setAuthView('signup')}
-          onForgotPassword={() => setAuthView('forgot-password')}
-        />
-      );
-    }
     if (authView === 'forgot-password') {
       return <ForgotPassword onSwitchToLogin={() => setAuthView('login')} />;
     }
-    return <SignUp onSignUp={handleSignUp} onSwitchToLogin={() => setAuthView('login')} />;
+    return (
+      <Login
+        onLogin={handleLogin}
+        onForgotPassword={() => setAuthView('forgot-password')}
+      />
+    );
   }
 
   return (
@@ -250,6 +225,15 @@ export default function App() {
             {currentView === 'vehicles' && (
               <VehicleList onSelectVehicle={setSelectedVehicle} />
             )}
+            {currentView === 'no-vehicle-data' && (
+              <VehicleNoData
+                vehicleName={noDataVehicleName}
+                onBack={() => {
+                  setNoDataVehicleName(null);
+                  setCurrentView('vehicles');
+                }}
+              />
+            )}
             {currentView === 'vehicle-history' && (
               <VehicleHistory
                 focusedVehicleId={historyFocusedVehicleId}
@@ -288,9 +272,18 @@ export default function App() {
           onViewTrip ={handleTripSelect}
           onViewHistory={handleViewHistory}
           onRecentTrip={async () => {
+            const vehicleName = selectedVehicle.name;
             const allTrips = await api.getVehicleTrips(selectedVehicle.id);
-            const sorted = allTrips.sort((a,b) => a.idx - b.idx);
-            const mostRecentTrip = sorted[sorted.length-1];
+            if (!Array.isArray(allTrips) || allTrips.length === 0) {
+              showNoVehicleData(vehicleName);
+              return;
+            }
+            const sorted = [...allTrips].sort((a, b) => a.idx - b.idx);
+            const mostRecentTrip = sorted[sorted.length - 1];
+            if (!mostRecentTrip?.trip_id) {
+              showNoVehicleData(vehicleName);
+              return;
+            }
             handleTripSelect(mostRecentTrip);
           }}
         />

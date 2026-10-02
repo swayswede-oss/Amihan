@@ -33,12 +33,25 @@ export function VehicleTripHistory({ trip, onMenuClick }) {
   }, [locations]);
 
   useEffect(() => {
+    if (!trip?.trip_id) {
+      return;
+    }
+    let cancelled = false;
     async function fetchLocations() {
       const fetchedLocs = await api.getTripLocations(trip.trip_id);
-      setLocations(fetchedLocs);
+      if (!cancelled) {
+        setLocations(Array.isArray(fetchedLocs) ? fetchedLocs : []);
+      }
     }
     fetchLocations();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [trip]);
+
+  if (!trip?.trip_id) {
+    return null;
+  }
   
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">

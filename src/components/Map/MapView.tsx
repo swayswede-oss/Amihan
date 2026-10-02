@@ -727,13 +727,16 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
         const data = await api.getMostRecentLocations();
         const formattedLocations = [];
         for (const vehicle of data) {
-          const locationObj = {
-            vehicleId: vehicle[0],
-            vehicleName: vehicle[1],
-            vehicleStatus: vehicle[2],
-            vehicleLocation: vehicle[3]
-          };
-          formattedLocations.push(locationObj);
+          const location = vehicle?.location;
+          if (location?.lat == null || location?.lon == null) {
+            continue;
+          }
+          formattedLocations.push({
+            vehicleId: vehicle.vehicle_id,
+            vehicleName: vehicle.vehicle_name,
+            vehicleStatus: vehicle.vehicle_status,
+            vehicleLocation: location,
+          });
         }
         setRecentLocations(formattedLocations);
       }
@@ -813,8 +816,14 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
         return;
       }
       const markers: L.Marker[] = [];
-      const firstPoint = locations[0].vehicleLocation;
-      for (const point of locations) {
+      const plottable = locations.filter(
+        (point) => point.vehicleLocation?.lat != null && point.vehicleLocation?.lon != null,
+      );
+      if (plottable.length === 0) {
+        return;
+      }
+      const firstPoint = plottable[0].vehicleLocation;
+      for (const point of plottable) {
         const marker = L.marker([
           point.vehicleLocation.lat,
           point.vehicleLocation.lon,
@@ -845,7 +854,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
         lastMarkerFitLocationsRef.current !== locations;
 
       if (shouldFitBounds) {
-        if (locations.length > 1) {
+        if (plottable.length > 1) {
           map.fitBounds(
             markersLayerRef.current
               .getBounds()

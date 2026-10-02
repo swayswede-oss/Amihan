@@ -33,6 +33,7 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
       const vehicles = [];
       for (const v of fetched) {
         const fetchedLocs = await api.getRecentVehicleLocations(v.vehicle_id);
+        const locations = Array.isArray(fetchedLocs) ? fetchedLocs : [];
         const vehicleObj = {
             id: v.vehicle_id,
             name: v.name,
@@ -41,8 +42,8 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
             status: v.status,
             lastUpdate: ""
         };
-        if (fetchedLocs.length > 0) {
-          const mostRecentLoc = fetchedLocs[0];
+        if (locations.length > 0) {
+          const mostRecentLoc = locations[0];
           vehicleObj.address = mostRecentLoc.address;
           vehicleObj.location = { lat: mostRecentLoc.lat, lng: mostRecentLoc.lon };
           vehicleObj.lastUpdate = formatDate(mostRecentLoc.timestamp, false);
@@ -127,7 +128,7 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
             <div className="space-y-2 lg:space-y-3">
               <div className="flex items-center gap-2 text-xs lg:text-sm text-gray-600">
                 <MapPin className="w-3 h-3 lg:w-4 lg:h-4 flex-shrink-0" />
-                <span className="truncate">{vehicle.address}</span>
+                <span className="truncate">{vehicle.address || 'No location logged'}</span>
               </div>
               {/*
               <div className="grid grid-cols-2 gap-3 lg:gap-4">
@@ -142,7 +143,9 @@ export function VehicleList({ onSelectVehicle }: VehicleListProps) {
               </div>
               */}
               <div className="pt-2 lg:pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-500">Last update: {vehicle.lastUpdate}</p>
+                <p className="text-xs text-gray-500">
+                  {vehicle.lastUpdate ? `Last update: ${vehicle.lastUpdate}` : 'No data logged'}
+                </p>
               </div>
             </div>
 

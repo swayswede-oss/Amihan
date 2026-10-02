@@ -336,7 +336,8 @@ body {
   box-sizing: border-box;
 }
 
-.vehicle-detail-tile button {
+.vehicle-detail-tile button,
+.profile-avatar-tile button {
   appearance: none;
   cursor: pointer;
 }
@@ -367,6 +368,111 @@ html {
   background-color: #d0d7e2 !important;
   border-radius: 50% !important;
   overflow: hidden;
+}
+
+.profile-menu-settings {
+  color: var(--color-gray-700);
+  background-color: #d9dfe8;
+  padding: 0.625rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.profile-menu-settings:hover {
+  color: var(--color-blue-600);
+  background-color: var(--color-blue-50);
+}
+
+.profile-footer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.profile-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.profile-round-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  line-height: 0;
+  border: none;
+  border-radius: 999px;
+  background: #1f4e79;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(31, 78, 121, 0.2);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profile-round-btn:hover {
+  background: #16385a;
+  box-shadow: 0 4px 10px rgba(31, 78, 121, 0.28);
+}
+
+.profile-round-btn:active {
+  background: #122c48;
+}
+
+.profile-round-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
+}
+
+.profile-round-btn svg {
+  display: block;
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes profile-avatar-swap {
+  0% {
+    transform: scale(0.72) rotate(-14deg);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.profile-avatar-swap {
+  animation: profile-avatar-swap 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.profile-avatar-button {
+  display: inline-flex;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.profile-avatar-button:hover {
+  box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.28);
+}
+
+.profile-avatar-button:focus-visible {
+  outline: 2px solid #1f4e79;
+  outline-offset: 3px;
 }
 
 .profile-menu-muted {

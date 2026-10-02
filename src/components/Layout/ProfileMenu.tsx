@@ -1,43 +1,45 @@
 import { useState, useEffect } from 'react';
-import { Mail, Phone, Calendar, Settings } from 'lucide-react';
+import { Mail, Phone, Calendar, Settings, LogOut } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { UserProfile } from '../../App';
 import { api } from '../../services/api.ts';
+import { ProfileAvatar } from '../Profile/ProfileAvatar';
+import { ShuffleAvatarButton } from '../Profile/ShuffleAvatarButton';
 
 type ProfileMenuProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: UserProfile;
   onProfileSettings: () => void;
+  onLogout: () => void;
 };
 
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: ProfileMenuProps) {
-  const [name, setName] = useState("");
+export function ProfileMenu({ open, onOpenChange, user, onProfileSettings, onLogout }: ProfileMenuProps) {
+  const name = user.name;
   const [memberSince, setMemberSince] = useState("");
   const [email, setEmail] = useState("");
   useEffect(() => {
+    let cancelled = false;
     async function fetchUserDetails() {
-      const fetchedDetails = await api.getUser();
-      setName(fetchedDetails.username);
-      setEmail(fetchedDetails.email);
-      const memberDate = new Date(fetchedDetails.created_at + "T00:00:00").toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-           
-      setMemberSince(memberDate);
+      try {
+        const fetchedDetails = await api.getUser();
+        if (cancelled || !fetchedDetails || typeof fetchedDetails !== "object") return;
+        if (typeof fetchedDetails.email === "string") setEmail(fetchedDetails.email);
+        if (!fetchedDetails.created_at) return;
+        const memberDate = new Date(fetchedDetails.created_at + "T00:00:00").toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        if (!cancelled) setMemberSince(memberDate);
+      } catch (error) {
+        console.error(error);
+      }
     }
     fetchUserDetails();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
   /*
   const memberSince = new Date(user.createdAt).toLocaleDateString('en-US', {
@@ -48,31 +50,45 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: Pro
   */
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <button
-          className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-lg transition-colors min-w-0 ${
-            open
-              ? 'bg-blue-50 text-blue-600'
-              : 'text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className={`text-sm ${open ? 'text-blue-600' : 'text-gray-600'}`}>
-              {getInitials(name)}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0 text-left">
-            <p className={`text-sm truncate ${open ? 'text-blue-600' : 'text-gray-900'}`}>
-              {name}
-            </p>
-            {/*
-            <p className={`text-xs truncate ${open ? 'text-blue-500' : 'text-gray-600'}`}>
-              {user.position}
-            </p>
-            */}
-          </div>
-        </button>
-      </PopoverTrigger>
+      <div className="profile-footer-row" style={{ flex: 1, minWidth: 0 }}>
+        <PopoverTrigger asChild>
+          <button
+            className={`profile-footer-row rounded-lg transition-colors min-w-0 ${
+              open
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+            style={{ flex: 1, padding: '0.25rem 0.5rem', minHeight: '2.5rem', gap: '0.75rem' }}
+          >
+            <ProfileAvatar username={name} />
+            <div className="min-w-0 text-left" style={{ flex: 1 }}>
+              <p
+                className={`truncate ${open ? 'text-blue-600' : 'text-gray-900'}`}
+                style={{ fontSize: '1.125rem', lineHeight: 1.3, fontWeight: 500 }}
+              >
+                {name}
+              </p>
+              {/*
+              <p className={`text-xs truncate ${open ? 'text-blue-500' : 'text-gray-600'}`}>
+                {user.position}
+              </p>
+              */}
+            </div>
+          </button>
+        </PopoverTrigger>
+        <div className="profile-footer-actions">
+          <ShuffleAvatarButton username={name} />
+          <button
+            type="button"
+            className="profile-round-btn"
+            aria-label="Log out"
+            title="Log out"
+            onClick={onLogout}
+          >
+            <LogOut aria-hidden="true" size={17} strokeWidth={2} />
+          </button>
+        </div>
+      </div>
 
       <PopoverContent
         side="top"
@@ -82,11 +98,14 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: Pro
       >
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-base text-gray-600">{getInitials(name)}</span>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">{name}</p>
+            <ProfileAvatar username={name} size={48} />
+            <div className="min-w-0">
+              <p
+                className="truncate text-gray-900"
+                style={{ fontSize: '1.25rem', lineHeight: 1.2, fontWeight: 600 }}
+              >
+                {name}
+              </p>
               {/*<p className="text-xs text-gray-500">{user.position}</p>*/}
             </div>
           </div>
@@ -118,12 +137,10 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: Pro
             </div>
           </div>
           */}
-        </div>
 
-        <div className="p-4 pt-0">
           <button
             onClick={onProfileSettings}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-sm"
+            className="profile-menu-settings w-full flex items-center justify-center gap-2 rounded-lg transition-colors text-sm"
           >
             <Settings className="w-4 h-4" />
             <span>Settings</span>

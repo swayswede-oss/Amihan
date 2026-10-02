@@ -17,6 +17,7 @@ type VehicleHistoryFiltersProps = {
   hasActiveFilters: boolean;
   onClearFilters: () => void;
   onExportCsv: () => void;
+  onExportPdf: () => void;
   filteredCount: number;
 };
 
@@ -32,6 +33,7 @@ export function VehicleHistoryFilters({
   hasActiveFilters,
   onClearFilters,
   onExportCsv,
+  onExportPdf,
   filteredCount,
 }: VehicleHistoryFiltersProps) {
   const selectClassName =
@@ -70,6 +72,15 @@ export function VehicleHistoryFilters({
           >
             <Download className="w-4 h-4" />
             Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={onExportPdf}
+            disabled={filteredCount === 0}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            Export PDF
           </button>
         </div>
       </div>

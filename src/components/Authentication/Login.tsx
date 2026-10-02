@@ -4,11 +4,10 @@ import logo from 'figma:asset/d766fe78c0990450ebe81dfc9bafb7412cf8f61d.png';
 
 type LoginProps = {
   onLogin: (username: string, password: string) => void;
-  onSwitchToSignUp: () => void;
   onForgotPassword: () => void;
 };
 
-export function Login({ onLogin, onSwitchToSignUp, onForgotPassword }: LoginProps) {
+export function Login({ onLogin, onForgotPassword }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -157,19 +156,6 @@ export function Login({ onLogin, onSwitchToSignUp, onForgotPassword }: LoginProp
             {/* axios post request to http://localhost:8080/users/login */}
             {/* handle response and cache token */}
           </form>
-
-          {/* Switch to Sign Up */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <button
-                onClick={onSwitchToSignUp}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Sign Up
-              </button>
-            </p>
-          </div>
         </div>
       </div>
     </div>

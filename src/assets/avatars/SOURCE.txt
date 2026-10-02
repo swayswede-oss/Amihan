@@ -1,0 +1,4 @@
+These SVG files are outline animal icons from IconPark by ByteDance.
+https://github.com/bytedance/IconPark
+Licensed under the Apache License, Version 2.0. See LICENSE in this folder.
+The files were downloaded unchanged from the upstream repository.

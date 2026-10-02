@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import { getOrCreateProfileAvatar } from '../components/Profile/profileAvatarStorage';
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL; // Change this to your backend URL
 
@@ -60,7 +61,9 @@ export const api = {
       const payload = {
         "idx": 0,
         "username": username,
+        "role": 0,
         "password_hash": password,
+        "group_id": "",
         "email": "",
         "created_at": "2026-08-01" // placeholder that gets filled in by the backend
       };
@@ -90,7 +93,7 @@ export const api = {
 
   getTestPolyline: async(): Promise<string> => {
     try {
-      const path = "/api/getPolyline/43acd555-eb65-4eec-8e30-684547a516ff";
+      const path = "/admin/getPolyline/43acd555-eb65-4eec-8e30-684547a516ff";
       const response = await axiosInstance.get(path);
       if (response.status == 200 ) {
         return response.data;
@@ -105,7 +108,7 @@ export const api = {
 
   getPolyline: async(tripId): Promise<string> => {
     try {
-      const path = "/api/getPolyline/" + tripId;
+      const path = "/admin/getPolyline/" + tripId;
       const response = await axiosInstance.get(path);
       if (response.status == 200 ) {
         return response.data;
@@ -118,20 +121,16 @@ export const api = {
     }
   },
   
-  getMostRecentLocations: async(): Promise<Array<[number, number]>> => {
-    const token = jwtDecode(localStorage.getItem("authToken"));
-    const currUser = localStorage.getItem("username");
+  getMostRecentLocations: async(): Promise<any[]> => {
     try {
-      const path = "/api/getRecentUser/" + currUser;
-      const response = await axiosInstance.get(path);
-      if (response.status == 200) {
+      const response = await axiosInstance.get("/admin/getRecentGroup");
+      if (response.status == 200 && Array.isArray(response.data)) {
         return response.data;
-      } else {
-        return "Couldn't get user locations";
       }
+      return [];
     } catch (error) {
       console.log(error);
-      return "Couldn't get user locations";
+      return [];
     }
   },
 
@@ -157,7 +156,7 @@ export const api = {
   
   getTripLocations: async(tripId): Promise<Array<[number, number]>> => {
     try {
-      const path = "/api/getAllTripLocs/" + tripId;
+      const path = "/admin/getAllTripLocs/" + tripId;
       const response = await axiosInstance.get(path);
       if (response.status == 200) {
         return response.data
@@ -172,7 +171,7 @@ export const api = {
 
   getFilteredTripLocs: async(tripId): Promise<any> => {
     try {
-      const path = "/api/getFilteredTripLocs/" + tripId;
+      const path = "/admin/getFilteredTripLocs/" + tripId;
       const response = await axiosInstance.get(path);
       if (response.status == 200) {
         return response.data
@@ -187,7 +186,7 @@ export const api = {
 
   getVehicleTrips: async(vehicleId): Promise<any> => {
     try {
-      const path = "/api/getAllVehicleTrips/" + vehicleId;
+      const path = "/admin/getAllVehicleTrips/" + vehicleId;
       const response = await axiosInstance.get(path);
       if (response.status == 200) {
         return response.data
@@ -202,7 +201,7 @@ export const api = {
 
   getRecentVehicleLocations: async(vehicleId): Promise<any> => {
     try {
-      const path = "/api/getRecentVehicle/" + vehicleId;
+      const path = "/admin/getRecentVehicle/" + vehicleId;
       const response = await axiosInstance.get(path);
       if (response.status == 200) {
         return response.data
@@ -217,7 +216,7 @@ export const api = {
 
   getTrip: async(tripId): Promise<any> => {
     try {
-      const path = "/api/getTrip/" + tripId;
+      const path = "/admin/getTrip/" + tripId;
       const response = await axiosInstance.get(path);
       if (response.status == 200) {
         return response.data;
@@ -232,7 +231,7 @@ export const api = {
 
   addVehicle: async(newVehicle): Promise<any> => {
     try {
-      const path = "/api/postVehicle";
+      const path = "/admin/postVehicle";
       const response = await axiosInstance.post(path, newVehicle);
       if (response.status == 201) {
         return "SUCCESS";
@@ -247,7 +246,7 @@ export const api = {
 
   deleteVehicle: async(vehicleId): Promise<any> => {
     try {
-      const path = "/api/deleteVehicle/" + vehicleId;
+      const path = "/admin/deleteVehicle/" + vehicleId;
       const response = await axiosInstance.delete(path);
       if (response.status == 200) {
         return "SUCCESS";
@@ -264,7 +263,7 @@ export const api = {
     const token = jwtDecode(localStorage.getItem("authToken"));
     const currUser = localStorage.getItem("username");
     try {
-      const path = "/api/getUser/" + currUser;
+      const path = "/admin/getUser/" + currUser;
       const response = await axiosInstance.get(path);
       if (response.status == 200) {
         return response.data;
@@ -281,7 +280,7 @@ export const api = {
     const token = jwtDecode(localStorage.getItem("authToken"));
     const currUser = localStorage.getItem("username");
     try {
-      const path = "/api/updateUser/" + currUser;
+      const path = "/admin/updateUser/" + currUser;
       const response = await axiosInstance.put(path, new_details);
       if (response.status == 200) {
         localStorage.setItem("username", new_details.new_username);
@@ -309,6 +308,7 @@ export const api = {
           const loginResponse = await api.login(username, password);
           console.log("Logged In: ", loginResponse.username);
           if (loginResponse.success == true) {
+              getOrCreateProfileAvatar(loginResponse.username);
               const response: AuthResponse = {
                 success: true,
                 username: loginResponse.username

@@ -2,6 +2,9 @@ import { useState, type FormEvent, useEffect } from 'react';
 import { ArrowLeft, CheckCircle2, Save } from 'lucide-react';
 import type { UserProfile } from '../../../App';
 import { api } from '../../../services/api.ts';
+import { ProfileAvatar } from '../../Profile/ProfileAvatar';
+import { ShuffleAvatarButton } from '../../Profile/ShuffleAvatarButton';
+import { renameProfileAvatar } from '../../Profile/profileAvatarStorage';
 type FormErrors = {
   name?: string;
   position?: string;
@@ -15,17 +18,9 @@ type ProfileSettingsProps = {
   onBack: () => void;
 };
 
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
-
 export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) {
   const [displayName, setDisplayName] = useState("");
+  const [avatarUsername, setAvatarUsername] = useState("");
   const [name, setName] = useState("");
   // const [position, setPosition] = useState(user.position);
   const [email, setEmail] = useState("");
@@ -41,6 +36,7 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
       const fetchedDetails = await api.getUser();
       setName(fetchedDetails.username);
       setDisplayName(fetchedDetails.username);
+      setAvatarUsername(fetchedDetails.username);
       setEmail(fetchedDetails.email);
       const memberDate = new Date(fetchedDetails.created_at + "T00:00:00").toLocaleDateString('en-US', {
         month: 'long',
@@ -92,21 +88,26 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
     event.preventDefault();
     setSuccessMessage(null);
 
+    if (!validate()) return;
+
     const new_details = {
       new_username: name.trim(),
       new_email: email.trim()
     };
+    const previousUsername = avatarUsername;
     const updateResponse = await api.updateUser(new_details);
+    if (updateResponse !== 'SUCCESS') return;
+
+    if (previousUsername !== new_details.new_username) {
+      renameProfileAvatar(previousUsername, new_details.new_username);
+      setAvatarUsername(new_details.new_username);
+    }
     setDisplayName(new_details.new_username);
-    if (!validate()) return;
     onSave({
       ...user,
-      name: name.trim(),
-      // position: position.trim(),
-      // email: email.trim(),
-      // phone: phone.trim(),
+      name: new_details.new_username,
+      email: new_details.new_email,
     });
-
     setSuccessMessage('Profile updated successfully.');
   };
 
@@ -135,17 +136,22 @@ export function ProfileSettings({ user, onSave, onBack }: ProfileSettingsProps) 
 
       <section className="bg-card rounded-lg border border-gray-200 p-4 lg:p-6 max-w-xl">
         <div className="mb-6 flex items-center gap-3">
-          <div className="profile-menu-avatar w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="profile-menu-muted text-base">
-              {getInitials(name.trim() || user.name)}
-            </span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+          <ProfileAvatar username={avatarUsername} size={96} expandable />
+          <div className="min-w-0 flex-1">
+            <p
+              className="truncate text-gray-900"
+              style={{ fontSize: '1.25rem', lineHeight: 1.25, fontWeight: 600 }}
+            >
               {displayName}
             </p>
-            <p className="profile-menu-muted text-xs">Member since {memberSince}</p>
+            <p
+              className="profile-menu-muted"
+              style={{ marginTop: '0.2rem', fontSize: '0.9375rem', lineHeight: 1.4 }}
+            >
+              Member since {memberSince}
+            </p>
           </div>
+          <ShuffleAvatarButton username={avatarUsername} />
         </div>
 
         {successMessage && (

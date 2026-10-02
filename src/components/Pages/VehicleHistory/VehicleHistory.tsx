@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { VehicleHistoryFilters } from './VehicleHistoryFilters';
 import { VehicleHistorySummaryCards } from './VehicleHistorySummaryCards';
 import { VehicleHistoryTable } from './VehicleHistoryTable';
@@ -9,9 +11,40 @@ import {
   getInitialDateRangeFromQuery,
   isWithinDateRange,
   vehicleHistoryRecords,
+  type VehicleHistoryRecord,
 } from '../../../data/vehicleHistoryData';
 
 const DEFAULT_DATE_RANGE: DateRangeFilter = 'all';
+
+const HISTORY_EXPORT_HEADERS = [
+  'Date / Time',
+  'Vehicle',
+  'Driver',
+  'Event Type',
+  'Event Description',
+  'Location',
+  'Speed (mph)',
+  'Fuel (%)',
+  'Status',
+];
+
+function historyExportRows(records: VehicleHistoryRecord[]): string[][] {
+  return records.map((record) => [
+    formatHistoryTimestamp(record.timestamp),
+    record.vehicleName,
+    record.driverName,
+    record.eventType,
+    record.eventDescription,
+    record.location,
+    record.speed.toString(),
+    record.fuel.toString(),
+    record.status,
+  ]);
+}
+
+function historyExportFilename(extension: 'csv' | 'pdf'): string {
+  return `vehicle-history-${new Date().toISOString().slice(0, 10)}.${extension}`;
+}
 
 type VehicleHistoryProps = {
   focusedVehicleId?: string | null;
@@ -89,32 +122,8 @@ export function VehicleHistory({
   const handleExportCsv = () => {
     if (filteredRecords.length === 0) return;
 
-    const headers = [
-      'Date / Time',
-      'Vehicle',
-      'Driver',
-      'Event Type',
-      'Event Description',
-      'Location',
-      'Speed (mph)',
-      'Fuel (%)',
-      'Status',
-    ];
-
-    const rows = filteredRecords.map((record) => [
-      formatHistoryTimestamp(record.timestamp),
-      record.vehicleName,
-      record.driverName,
-      record.eventType,
-      record.eventDescription,
-      record.location,
-      record.speed.toString(),
-      record.fuel.toString(),
-      record.status,
-    ]);
-
     const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
-    const csvContent = [headers, ...rows]
+    const csvContent = [HISTORY_EXPORT_HEADERS, ...historyExportRows(filteredRecords)]
       .map((row) => row.map(escapeCsv).join(','))
       .join('\n');
 
@@ -122,9 +131,36 @@ export function VehicleHistory({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `vehicle-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = historyExportFilename('csv');
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportPdf = () => {
+    if (filteredRecords.length === 0) return;
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
+    doc.setFontSize(16);
+    doc.text('Vehicle History', 40, 40);
+    doc.setFontSize(10);
+    doc.setTextColor(75, 85, 99);
+    doc.text(
+      `${filteredRecords.length} record${filteredRecords.length === 1 ? '' : 's'}`,
+      40,
+      58,
+    );
+    doc.setTextColor(0, 0, 0);
+
+    autoTable(doc, {
+      startY: 72,
+      head: [HISTORY_EXPORT_HEADERS],
+      body: historyExportRows(filteredRecords),
+      styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
+      headStyles: { fillColor: [74, 83, 100], textColor: 255 },
+      margin: { left: 40, right: 40 },
+    });
+
+    doc.save(historyExportFilename('pdf'));
   };
 
   return (
@@ -148,6 +184,7 @@ export function VehicleHistory({
         hasActiveFilters={hasActiveFilters}
         onClearFilters={handleClearFilters}
         onExportCsv={handleExportCsv}
+        onExportPdf={handleExportPdf}
         filteredCount={filteredRecords.length}
       />
 
