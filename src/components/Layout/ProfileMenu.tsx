@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Phone, Calendar, Settings, LogOut } from 'lucide-react';
+import { Mail, Phone, Calendar, Settings } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { UserProfile } from '../../App';
 import { api } from '../../services/api.ts';
@@ -11,10 +11,9 @@ type ProfileMenuProps = {
   onOpenChange: (open: boolean) => void;
   user: UserProfile;
   onProfileSettings: () => void;
-  onLogout: () => void;
 };
 
-export function ProfileMenu({ open, onOpenChange, user, onProfileSettings, onLogout }: ProfileMenuProps) {
+export function ProfileMenu({ open, onOpenChange, user, onProfileSettings }: ProfileMenuProps) {
   const name = user.name;
   const [memberSince, setMemberSince] = useState("");
   const [email, setEmail] = useState("");
@@ -78,15 +77,6 @@ export function ProfileMenu({ open, onOpenChange, user, onProfileSettings, onLog
         </PopoverTrigger>
         <div className="profile-footer-actions">
           <ShuffleAvatarButton username={name} />
-          <button
-            type="button"
-            className="profile-round-btn"
-            aria-label="Log out"
-            title="Log out"
-            onClick={onLogout}
-          >
-            <LogOut aria-hidden="true" size={17} strokeWidth={2} />
-          </button>
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import {
   Settings,
   Clock,
   GripVertical,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react';
 import { UserProfile } from '../../App';
@@ -189,17 +190,22 @@ export function Sidebar({ currentView, onViewChange, isOpen, onClose, onLogout, 
         </nav>
 
         <div className="p-4" style={{ borderTop: '1px solid #9da8c4' }}>
-          <div className="profile-footer-row">
+          <div className="flex items-center gap-2">
             <ProfileMenu
               open={isProfileOpen}
               onOpenChange={setIsProfileOpen}
               user={user}
-              onLogout={onLogout}
               onProfileSettings={() => {
                 setIsProfileOpen(false);
                 onViewChange('settings');
               }}
             />
+            <button
+              onClick={onLogout}
+              className="flex-shrink-0 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>
