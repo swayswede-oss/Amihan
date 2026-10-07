@@ -1,4 +1,4 @@
-import React,{ useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Maximize, Minimize2, Menu } from 'lucide-react';
 import { Vehicle } from '../../App';
@@ -9,7 +9,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-leaflet';
 import { api } from '../../services/api';
 import { formatDate } from '../Pages/Vehicles/VehicleDetails.tsx';
-
+import { decode } from '@mapbox/polyline';
 type MapViewProps = {
   mapType: string;
 }
@@ -128,13 +128,13 @@ function elevateLeafletOverlayPanes(map: L.Map) {
   );
 }
 
-function VehiclePopupCard({ id, data, changeType, popupType })  {
+function VehiclePopupCard({ id, data, changeType, popupType }) {
   const rawDate = new Date(data[1]);
   const formattedDate = new Intl.DateTimeFormat('en-US').format(rawDate);
   return (
     <div
       style={{
-        maxWidth:300,
+        maxWidth: 300,
         borderRadius: 12,
         border: 'none !important',
         color: '#4A5364',
@@ -142,10 +142,10 @@ function VehiclePopupCard({ id, data, changeType, popupType })  {
     >
       <h3><strong>{id}</strong></h3>
       <hr />
-      <p style={{ marginBottom: 0}}><strong>Trip ID</strong></p>
+      <p style={{ marginBottom: 0 }}><strong>Trip ID</strong></p>
       <p style={{ marginTop: 0 }}>{data[0]}</p>
       <hr />
-      <p style={{ marginBottom: 0}}><strong>Trip Date</strong></p>
+      <p style={{ marginBottom: 0 }}><strong>Trip Date</strong></p>
       <p style={{ marginTop: 0 }}>{formattedDate}</p>
       <button
         onClick={() => changeType()}
@@ -155,18 +155,18 @@ function VehiclePopupCard({ id, data, changeType, popupType })  {
           backgroundColor: '#3B82F6',
           color: '#FFFFFF',
           padding: '10px 12px',
-          fontWeight: 500,          
+          fontWeight: 500,
         }}
       >
         Back
       </button>
     </div>
-  )     
+  )
 }
 
 export function VehicleHistoryMap({ selectedTrip, onMenuClick }) {
   // map container and instance references
-  const mapModuleRef = useRef<HTMLDivElement | null>(null);  
+  const mapModuleRef = useRef<HTMLDivElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const vehicleMarkersRef = useRef<Map<string, L.Marker>>(
@@ -177,6 +177,7 @@ export function VehicleHistoryMap({ selectedTrip, onMenuClick }) {
 
   // display data layers  
   const [rawCoords, setRawCoords] = useState<unknown[] | null>(null);
+  const [selectedPolyline, setSelectedPolyline] = useState<string | null>(null);
 
   // set map tile layer
   const [mapStyleLayer, setMapStyleLayer] = useState<any>(null);
@@ -199,12 +200,12 @@ export function VehicleHistoryMap({ selectedTrip, onMenuClick }) {
     }
 
     return () => {
-       if (mapInstanceRef.current) {
-         mapInstanceRef.current.remove();
-         mapInstanceRef.current = null;
-         setMapReady(false);
-       }
-     };    
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        setMapReady(false);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -280,20 +281,31 @@ export function VehicleHistoryMap({ selectedTrip, onMenuClick }) {
   }, [rawCoords]);
 
   useEffect(() => {
+    async function fetchPolyline(): Promise<any> {
+      const fetchedLine = await api.getPolyline(selectedTrip);
+      setSelectedPolyline(fetchedLine);
+    }
+    fetchPolyline();
+  }, [selectedTrip]);
+
+  useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !showRouteLine || !rawCoords || rawCoords.length === 0) {
       return;
     }
 
-    const line = plotTripLine(map, tripLatLngs(rawCoords));
+    if (!selectedPolyline) return;
+    const polylineCoords = decode(selectedPolyline);
+
+    const line = plotTripLine(map, tripLatLngs(polylineCoords));
     if (!line) {
       return;
     }
 
     return () => {
       map.removeLayer(line);
-    };
-  }, [rawCoords, showRouteLine]);
+    }
+  }, [selectedPolyline])
 
   function setMapStyle(useDark: boolean) {
     const map = mapInstanceRef.current;
@@ -426,9 +438,8 @@ export function VehicleHistoryMap({ selectedTrip, onMenuClick }) {
                 width: '40px',
                 height: '18px',
                 borderRadius: '9999px',
-                border: `1px solid ${
-                  showRouteLine ? ROUTE_TOGGLE_ON_BORDER : ROUTE_TOGGLE_OFF_BORDER
-                }`,
+                border: `1px solid ${showRouteLine ? ROUTE_TOGGLE_ON_BORDER : ROUTE_TOGGLE_OFF_BORDER
+                  }`,
                 backgroundColor: showRouteLine ? ROUTE_TOGGLE_ON : ROUTE_TOGGLE_OFF,
                 transition: 'background-color 0.2s ease, border-color 0.2s ease',
               }}
@@ -531,9 +542,8 @@ export function VehicleHistoryMap({ selectedTrip, onMenuClick }) {
       </header>
 
       <div
-        className={`map-view-map-area relative flex-1 min-h-0 w-full${
-          mapColor ? ' map-zoom-dark-mode' : ''
-        }`}
+        className={`map-view-map-area relative flex-1 min-h-0 w-full${mapColor ? ' map-zoom-dark-mode' : ''
+          }`}
       >
         <div
           ref={mapContainerRef}
@@ -548,7 +558,7 @@ export function VehicleHistoryMap({ selectedTrip, onMenuClick }) {
 export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuClick }) {
 
   // map container and instance references
-  const mapModuleRef = useRef<HTMLDivElement | null>(null);  
+  const mapModuleRef = useRef<HTMLDivElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const vehicleMarkersRef = useRef<Map<string, L.Marker>>(
@@ -566,7 +576,8 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
   const [selectedVehicle, setSelectedVehicle] = useState<string>("") // User selected Vehicle Name
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("") // User selected Vehicle ID
   const [selectedVehicleStatus, setSelectedVehicleStatus] = useState<number>(0);
-  const [selectedTrip, setSelectedTrip] = useState<string>("") 
+  const [selectedTrip, setSelectedTrip] = useState<string>("")
+  const [selectedPolyline, setSelectedPolyline] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [recentLocations, setRecentLocations] = useState<Array<[number, number]> | null>(null); // VDM coordinate array
 
@@ -612,12 +623,12 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
     }
 
     return () => {
-       if (mapInstanceRef.current) {
-         mapInstanceRef.current.remove();
-         mapInstanceRef.current = null;
-         setMapReady(false);
-       }
-     };    
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        setMapReady(false);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -697,16 +708,16 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
       );
     }
   }, [highlightedVehicle, recentLocations]);
-  
+
   useEffect(() => {
     if (isTimerOn == true) {
       const timer = setInterval(() => {
         setTimerTick(prevTick => prevTick + 1);
-        }, 5000);
-        return () => clearInterval(timer);      
+      }, 5000);
+      return () => clearInterval(timer);
     }
   }, [isTimerOn]);
-  
+
   useEffect(() => {
     if (currMapType == "vlm") {
       setRecentLocations(null); // reset state
@@ -718,7 +729,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
       loadTripPoints();
     }
   }, [currMapType]);
-  
+
   useEffect(() => {
     if (currMapType == "vdm") {
       // fetch recent location data
@@ -745,6 +756,14 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
   }, [currMapType, timerTick]);
 
   useEffect(() => {
+    async function fetchPolyline(): Promise<any> {
+      const fetchedLine = await api.getPolyline(selectedTrip);
+      setSelectedPolyline(fetchedLine);
+    }
+    fetchPolyline();
+  }, [selectedTrip])
+
+  useEffect(() => {
     if (currMapType !== "vlm") {
       return;
     }
@@ -760,7 +779,10 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
     }
 
     const group = plotTripMarkers(map, latLngs);
-    const line = plotTripLine(map, latLngs);
+
+    if (!selectedPolyline) return;
+    const polylineCoords = decode(selectedPolyline);
+    const line = plotTripLine(map, tripLatLngs(polylineCoords));
     if (!group) {
       return;
     }
@@ -783,10 +805,10 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
         map.removeLayer(line);
       }
     };
-  }, [rawCoords, currMapType, selectedTrip]);    
+  }, [rawCoords, currMapType, selectedTrip]);
 
   // build VDM map layer with coordinates
-    const renderVehicleMarkers = useCallback(
+  const renderVehicleMarkers = useCallback(
     (fitToFleet = false) => {
       const map = mapInstanceRef.current;
       const locations = recentLocations;
@@ -804,7 +826,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
         vehicleMarkersRef.current.clear();
         return;
       }
-      
+
       if (markersLayerRef.current) {
         map.removeLayer(markersLayerRef.current);
         markersLayerRef.current = null;
@@ -828,12 +850,12 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
           point.vehicleLocation.lat,
           point.vehicleLocation.lon,
         ]);
-      
+
         vehicleMarkersRef.current.set(
           point.vehicleName,
           marker,
         );
-        
+
         marker.on('click', () => {
           setIsTimerOn(false);
           setSelectedVehicle(point.vehicleName);
@@ -841,7 +863,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
           setSelectedTrip(point.vehicleLocation.trip_id);
           setSelectedDate(point.vehicleLocation.timestamp);
           setSelectedVehicleStatus(point.vehicleStatus);
-          setSelectedTile({name: point.vehicleName, address: point.vehicleLocation.address});
+          setSelectedTile({ name: point.vehicleName, address: point.vehicleLocation.address });
         });
         markers.push(marker);
       }
@@ -879,7 +901,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
   );
   renderVehicleMarkersRef.current = renderVehicleMarkers;
 
-  function getSearchMatches(): Array<[number, number]>{
+  function getSearchMatches(): Array<[number, number]> {
     const query = searchQuery.trim().toLowerCase();
     if (!query || !recentLocations) {
       return [];
@@ -938,7 +960,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
     setShowSearchResults(false);
     focusVehicle(vehicleName);
   }
-  
+
   const searchMatches = getSearchMatches();
 
   function setMapStyle(useDark: boolean) {
@@ -1030,7 +1052,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
       setCurrMapType('vdm');
     }
   }
-  
+
   return (
     <div
       ref={mapModuleRef}
@@ -1081,7 +1103,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
               {/* 12 vehicles active · Updated just now */}
             </p>
           </div>
-          
+
         </div>
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
           <div
@@ -1125,7 +1147,7 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
                     setShowSearchResults(true);
                   }
                 }}
-                onKeyDown={() => {}}
+                onKeyDown={() => { }}
                 className="map-header-search-input w-full focus:outline-none"
                 style={{
                   flex: 1,
@@ -1315,9 +1337,8 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
       </header>
 
       <div
-        className={`map-view-map-area relative flex-1 min-h-0 w-full${
-          mapColor ? ' map-zoom-dark-mode' : ''
-        }`}
+        className={`map-view-map-area relative flex-1 min-h-0 w-full${mapColor ? ' map-zoom-dark-mode' : ''
+          }`}
       >
         <div
           ref={mapContainerRef}
@@ -1346,9 +1367,9 @@ export function RecentLocationsMap({ onViewHistory, onViewTripHistory, onMenuCli
           onViewHistory={
             onViewHistory
               ? (vehicle) => {
-                  closeVehicleTile();
-                  onViewHistory(vehicle);
-                }
+                closeVehicleTile();
+                onViewHistory(vehicle);
+              }
               : undefined
           }
         />
